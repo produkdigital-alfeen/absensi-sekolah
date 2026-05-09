@@ -1,0 +1,24 @@
+{
+"name": "ABSENSI SISWA ONLINE",
+"short_name": "Absensi",
+"description": "Sistem Absensi Terpadu Sekolah MA Al Qomariah",
+"start_url": "./index.html",
+"display": "standalone",
+"background_color": "#f0fdfa",
+"theme_color": "#0d9488",
+"orientation": "portrait",
+"icons": [
+{
+"src": "https://jmtyhlpnzposejasobcv.supabase.co/storage/v1/object/public/logo/logo%20alqom%20baru.png",
+"sizes": "192x192",
+"type": "image/png",
+"purpose": "any maskable"
+},
+{
+"src": "https://jmtyhlpnzposejasobcv.supabase.co/storage/v1/object/public/logo/logo%20alqom%20baru.png",
+"sizes": "512x512",
+"type": "image/png",
+"purpose": "any maskable"
+}
+]
+}
