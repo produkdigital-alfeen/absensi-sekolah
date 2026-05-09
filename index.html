@@ -515,42 +515,72 @@
 
         function renderManualSection() {
             const filtered = state.students.filter(s => (state.selectedClass === '' || s.class_id === state.selectedClass));
-            return `<div class="bg-white p-10 rounded-5xl border border-slate-100 shadow-xl overflow-x-auto">
-                <div class="flex flex-col md:flex-row gap-6 mb-10 items-end min-w-[600px]">
+            return `<div class="tosca-gradient p-6 md:p-12 rounded-5xl border border-teal-400 shadow-2xl overflow-x-auto">
+                <!-- Header Controls: Toggle & Filter -->
+                <div class="flex flex-col md:flex-row gap-8 mb-12 items-stretch md:items-end min-w-[300px]">
+                    <!-- Toggle Sesi (Masuk/Pulang) -->
                     <div class="flex-1">
-                        <label class="text-[10px] font-black text-tosca uppercase mb-3 block">Sesi</label>
-                        <div class="flex bg-slate-50 p-2 rounded-2xl">
-                            <button onclick="window.state.manualMode='check_in'; window.fetchData()" class="flex-1 py-3 text-[10px] font-black rounded-xl ${state.manualMode === 'check_in' ? 'bg-white shadow text-tosca' : 'text-slate-400'} uppercase">Masuk</button>
-                            <button onclick="window.state.manualMode='check_out'; window.fetchData()" class="flex-1 py-3 text-[10px] font-black rounded-xl ${state.manualMode === 'check_out' ? 'bg-white shadow text-tosca' : 'text-slate-400'} uppercase">Pulang</button>
+                        <label class="text-[11px] font-black text-yellow-400 uppercase mb-4 block tracking-[0.2em]">Pilih Sesi Absensi</label>
+                        <div class="flex bg-teal-900/40 p-2.5 rounded-3xl border border-white/10 gap-3">
+                            <button onclick="window.state.manualMode='check_in'; window.fetchData()" 
+                                    class="flex-1 py-4 text-[11px] font-black rounded-2xl transition-all duration-300 ${state.manualMode === 'check_in' ? 'bg-yellow-400 text-teal-900 shadow-lg scale-105' : 'text-yellow-400/50 hover:bg-white/5'} uppercase tracking-widest">
+                                <i data-lucide="log-in" class="w-3.5 h-3.5 inline mr-1"></i> Masuk
+                            </button>
+                            <button onclick="window.state.manualMode='check_out'; window.fetchData()" 
+                                    class="flex-1 py-4 text-[11px] font-black rounded-2xl transition-all duration-300 ${state.manualMode === 'check_out' ? 'bg-yellow-400 text-teal-900 shadow-lg scale-105' : 'text-yellow-400/50 hover:bg-white/5'} uppercase tracking-widest">
+                                <i data-lucide="log-out" class="w-3.5 h-3.5 inline mr-1"></i> Pulang
+                            </button>
                         </div>
                     </div>
+                    <!-- Filter Kelas -->
                     <div class="flex-1">
-                        <label class="text-[10px] font-black text-tosca uppercase mb-3 block">Filter Kelas</label>
-                        <select onchange="window.state.selectedClass=this.value; window.fetchData()" class="w-full p-4 bg-slate-50 rounded-2xl font-black text-sm outline-none">
-                            <option value="">Semua Kelas</option>
-                            ${state.classes.map(cl => `<option value="${cl.id}" ${state.selectedClass === cl.id ? 'selected' : ''}>${cl.name}</option>`).join('')}
+                        <label class="text-[11px] font-black text-yellow-400 uppercase mb-4 block tracking-[0.2em]">Filter Kelas</label>
+                        <select onchange="window.state.selectedClass=this.value; window.fetchData()" 
+                                class="w-full p-4.5 bg-teal-900/30 border border-teal-400/30 text-yellow-400 rounded-3xl font-black text-sm outline-none focus:border-yellow-400 transition-all appearance-none">
+                            <option value="" class="bg-teal-800">Semua Kelas</option>
+                            ${state.classes.map(cl => `<option value="${cl.id}" ${state.selectedClass === cl.id ? 'selected' : ''} class="bg-teal-800">${cl.name}</option>`).join('')}
                         </select>
                     </div>
                 </div>
-                <table class="w-full min-w-[700px]">
-                    <thead class="text-left text-[10px] font-black text-slate-300 uppercase tracking-widest border-b border-slate-50">
-                        <tr><th class="pb-6">Siswa</th><th class="pb-6 text-center">Status</th><th class="pb-6">Catatan</th><th class="pb-6 text-right">WA</th></tr>
+
+                <!-- Table Content -->
+                <table class="w-full min-w-[750px]">
+                    <thead class="text-left text-[11px] font-black text-yellow-500 uppercase tracking-[0.3em] border-b border-white/10">
+                        <tr>
+                            <th class="pb-6">Nama Lengkap</th>
+                            <th class="pb-6 text-center">Status</th>
+                            <th class="pb-6">Keterangan / Alasan</th>
+                            <th class="pb-6 text-right">Notif WA</th>
+                        </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-50">
+                    <tbody class="divide-y divide-white/5">
                         ${filtered.map(s => {
                             const att = state.attendance.find(a => a.student_id === s.id);
-                            return `<tr>
-                                <td class="py-6 font-black text-slate-800">${s.name}</td>
-                                <td class="py-6 text-center">
-                                    <select onchange="window.markAttendance('${s.id}', this.value)" class="p-3 border border-slate-100 rounded-2xl text-[10px] font-black uppercase text-tosca bg-white shadow-sm">
-                                        <option value="Hadir" ${att?.status === 'Hadir' ? 'selected' : ''}>Hadir</option>
-                                        <option value="Sakit" ${att?.status === 'Sakit' ? 'selected' : ''}>Sakit</option>
-                                        <option value="Izin" ${att?.status === 'Izin' ? 'selected' : ''}>Izin</option>
-                                        <option value="Alpa" ${att?.status === 'Alpa' ? 'selected' : ''}>Alpa</option>
+                            return `<tr class="group hover:bg-white/5 transition-all">
+                                <td class="py-7">
+                                    <p class="font-black text-white text-sm uppercase tracking-tight">${s.name}</p>
+                                    <p class="text-[10px] font-bold text-yellow-400/50">${s.nisn}</p>
+                                </td>
+                                <td class="py-7 text-center">
+                                    <select onchange="window.markAttendance('${s.id}', this.value)" 
+                                            class="p-3.5 border border-yellow-400/30 rounded-2xl text-[10px] font-black uppercase text-white bg-teal-800 shadow-sm focus:border-yellow-400 outline-none cursor-pointer">
+                                        <option value="Hadir" ${att?.status === 'Hadir' ? 'selected' : ''} class="bg-teal-800">Hadir</option>
+                                        <option value="Sakit" ${att?.status === 'Sakit' ? 'selected' : ''} class="bg-teal-800">Sakit</option>
+                                        <option value="Izin" ${att?.status === 'Izin' ? 'selected' : ''} class="bg-teal-800">Izin</option>
+                                        <option value="Alpa" ${att?.status === 'Alpa' ? 'selected' : ''} class="bg-teal-800">Alpa</option>
                                     </select>
                                 </td>
-                                <td class="py-6"><input placeholder="Catatan..." value="${att?.notes || ''}" onblur="window.markAttendance('${s.id}', null, this.value)" class="w-full p-4 bg-slate-50 rounded-2xl text-[10px] font-bold outline-none"></td>
-                                <td class="py-6 text-right"><button onclick="window.sendWA('${s.name}', '${s.parent_phone}', '${att?.status || 'Hadir'}', '${att?.notes || ''}')" class="p-4 bg-emerald-50 text-emerald-600 rounded-4xl hover:bg-emerald-600 hover:text-white transition-all"><i data-lucide="message-circle" class="w-4 h-4"></i></button></td>
+                                <td class="py-7">
+                                    <input placeholder="Tulis catatan..." value="${att?.notes || ''}" 
+                                           onblur="window.markAttendance('${s.id}', null, this.value)" 
+                                           class="w-full p-4.5 bg-teal-900/40 border border-teal-400/20 text-white placeholder-yellow-400/20 rounded-2xl text-[10px] font-bold outline-none focus:border-yellow-400">
+                                </td>
+                                <td class="py-7 text-right">
+                                    <button onclick="window.sendWA('${s.name}', '${s.parent_phone}', '${att?.status || 'Hadir'}', '${att?.notes || ''}')" 
+                                            class="p-5 bg-yellow-400 text-teal-900 rounded-full hover:scale-110 active:scale-95 transition-all shadow-xl">
+                                        <i data-lucide="message-circle" class="w-5 h-5"></i>
+                                    </button>
+                                </td>
                             </tr>`;
                         }).join('')}
                     </tbody>
