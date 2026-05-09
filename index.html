@@ -216,7 +216,7 @@
             lucide.createIcons();
         };
 
-        // --- CRUD OPERATIONS ---
+        // --- STREAMING_CHUNK:Defining CRUD Actions... ---
         window.saveClass = async () => {
             const name = document.getElementById('m-cl-name').value.trim();
             if(!name) return;
@@ -252,38 +252,6 @@
             }
         };
 
-        window.saveJournal = async () => {
-            const payload = {
-                teacher_name: document.getElementById('j-teacher').value,
-                subject: document.getElementById('j-subject').value,
-                class_id: document.getElementById('j-class').value,
-                notes: document.getElementById('j-notes').value
-            };
-            const { error } = await supabaseClient.from('journals').insert([payload]);
-            if (!error) { window.notify("Jurnal Disimpan"); window.closeModal(); await window.fetchData(); }
-        };
-
-        window.saveAchievement = async () => {
-            const payload = {
-                student_id: document.getElementById('a-student').value,
-                title: document.getElementById('a-title').value,
-                description: document.getElementById('a-desc').value
-            };
-            const { error } = await supabaseClient.from('achievements').insert([payload]);
-            if (!error) { window.notify("Prestasi Disimpan"); window.closeModal(); await window.fetchData(); }
-        };
-
-        window.updateSettings = async () => {
-            const sets = [
-                { key: 'check_in_start', value: document.getElementById('s-in-s').value },
-                { key: 'check_in_end', value: document.getElementById('s-in-e').value },
-                { key: 'check_out_start', value: document.getElementById('s-out-s').value },
-                { key: 'check_out_end', value: document.getElementById('s-out-e').value }
-            ];
-            const { error } = await supabaseClient.from('settings').upsert(sets, { onConflict: 'key' });
-            if (!error) window.notify("Pengaturan Diperbarui");
-        };
-
         window.deleteData = async (table, id) => {
             if (!confirm("Apakah Anda yakin ingin menghapus data ini secara permanen?")) return;
             try {
@@ -296,116 +264,23 @@
             }
         };
 
-        // --- MODAL HANDLERS ---
-        window.openAddClass = () => {
-            const b = document.getElementById('modal-body');
-            document.getElementById('modal-title').innerText = "Tambah Kelas";
-            b.innerHTML = `<div class="space-y-6"><input type="text" id="m-cl-name" placeholder="Nama Kelas" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none"><button onclick="window.saveClass()" class="w-full py-6 tosca-gradient text-white rounded-3xl font-black uppercase shadow-xl">Simpan</button></div>`;
-            document.getElementById('modal').classList.remove('hidden');
-            lucide.createIcons();
-        };
-
-        window.openAddStudent = () => {
-            const b = document.getElementById('modal-body');
-            document.getElementById('modal-title').innerText = "Tambah Siswa";
-            b.innerHTML = `<div class="space-y-6">
-                <input type="text" id="m-st-name" placeholder="Nama Lengkap" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
-                <input type="text" id="m-st-nisn" placeholder="NISN" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
-                <select id="m-st-cl" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
-                    ${state.classes.map(cl => `<option value="${cl.id}">${cl.name}</option>`).join('')}
-                </select>
-                <input type="text" id="m-st-ph" placeholder="No WA (Contoh: 628123...)" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
-                <button onclick="window.saveStudent()" class="w-full py-6 tosca-gradient text-white rounded-3xl font-black uppercase shadow-xl">Simpan</button></div>`;
-            document.getElementById('modal').classList.remove('hidden');
-            lucide.createIcons();
-        };
-
-        window.openEditStudent = (id) => {
-            const s = state.students.find(x => x.id === id);
-            if (!s) return;
-            const b = document.getElementById('modal-body');
-            document.getElementById('modal-title').innerText = "Edit Data Siswa";
-            b.innerHTML = `<div class="space-y-6">
-                <input type="text" id="e-st-name" value="${s.name}" placeholder="Nama Lengkap" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
-                <input type="text" id="e-st-nisn" value="${s.nisn}" placeholder="NISN" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
-                <select id="e-st-cl" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
-                    ${state.classes.map(cl => `<option value="${cl.id}" ${s.class_id === cl.id ? 'selected' : ''}>${cl.name}</option>`).join('')}
-                </select>
-                <input type="text" id="e-st-ph" value="${s.parent_phone || ''}" placeholder="No WA Orang Tua" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
-                <button onclick="window.updateStudent('${id}')" class="w-full py-6 tosca-gradient text-white rounded-3xl font-black uppercase shadow-xl">Update Data</button></div>`;
-            document.getElementById('modal').classList.remove('hidden');
-            lucide.createIcons();
-        };
-
-        window.openAddJournal = () => {
-            const b = document.getElementById('modal-body');
-            document.getElementById('modal-title').innerText = "Catat Jurnal Guru";
-            b.innerHTML = `<div class="space-y-6">
-                <input type="text" id="j-teacher" placeholder="Nama Guru" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
-                <input type="text" id="j-subject" placeholder="Mata Pelajaran" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
-                <select id="j-class" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
-                    ${state.classes.map(cl => `<option value="${cl.id}">${cl.name}</option>`).join('')}
-                </select>
-                <textarea id="j-notes" placeholder="Ringkasan KBM / Catatan" class="w-full p-6 bg-slate-50 rounded-3xl font-bold outline-none h-32"></textarea>
-                <button onclick="window.saveJournal()" class="w-full py-6 tosca-gradient text-white rounded-3xl font-black uppercase shadow-xl">Simpan Jurnal</button></div>`;
-            document.getElementById('modal').classList.remove('hidden');
-            lucide.createIcons();
-        };
-
-        window.openAddAchievement = () => {
-            const b = document.getElementById('modal-body');
-            document.getElementById('modal-title').innerText = "Catat Prestasi";
-            b.innerHTML = `<div class="space-y-6">
-                <select id="a-student" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
-                    ${state.students.map(s => `<option value="${s.id}">${s.name} (${s.classes?.name})</option>`).join('')}
-                </select>
-                <input type="text" id="a-title" placeholder="Judul Prestasi / Penghargaan" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
-                <textarea id="a-desc" placeholder="Deskripsi Pencapaian" class="w-full p-6 bg-slate-50 rounded-3xl font-bold outline-none h-32"></textarea>
-                <button onclick="window.saveAchievement()" class="w-full py-6 gold-gradient text-white rounded-3xl font-black uppercase shadow-xl">Simpan Prestasi</button></div>`;
-            document.getElementById('modal').classList.remove('hidden');
-            lucide.createIcons();
-        };
-
-        // --- EXCEL & QR ---
-        window.handleExcelImport = async (e) => {
-            const file = e.target.files[0];
-            if(!file) return;
-            const reader = new FileReader();
-            reader.onload = async (evt) => {
-                const data = evt.target.result;
-                const workbook = XLSX.read(data, { type: 'binary' });
-                const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                const rows = XLSX.utils.sheet_to_json(sheet);
-                
-                window.notify(`Memproses ${rows.length} data siswa...`);
-                for (let row of rows) {
-                    const cl = state.classes.find(c => c.name.toLowerCase() === (row.class_name || "").toLowerCase());
-                    if (cl) {
-                        await supabaseClient.from('students').insert([{
-                            name: row.name, nisn: String(row.nisn), class_id: cl.id, parent_phone: String(row.parent_phone || "")
-                        }]);
-                    }
-                }
-                window.notify("Import Selesai");
-                await window.fetchData();
+        // --- STREAMING_CHUNK:Recap Logic... ---
+        window.getClassRecap = (classId) => {
+            const classStudents = state.students.filter(s => s.class_id === classId);
+            const studentIds = classStudents.map(s => s.id);
+            const attToday = state.attendance.filter(a => studentIds.includes(a.student_id));
+            
+            return {
+                total: classStudents.length,
+                hadir: attToday.filter(a => a.status === 'Hadir').length,
+                sakit: attToday.filter(a => a.status === 'Sakit').length,
+                izin: attToday.filter(a => a.status === 'Izin').length,
+                alpa: attToday.filter(a => a.status === 'Alpa').length,
+                belum: classStudents.length - attToday.length
             };
-            reader.readAsBinaryString(file);
         };
 
-        window.downloadQR = (nisn, name) => {
-            const container = document.getElementById('qr-hidden-container');
-            container.innerHTML = '';
-            new QRCode(container, { text: nisn, width: 300, height: 300 });
-            setTimeout(() => {
-                const img = container.querySelector('img');
-                const link = document.createElement('a');
-                link.download = `QR_${name}.png`; 
-                link.href = img.src; 
-                link.click();
-            }, 500);
-        };
-
-        // --- RENDERERS ---
+        // --- STREAMING_CHUNK:Renderers... ---
         function render() {
             const nav = document.getElementById('nav-links');
             nav.innerHTML = pages.map(p => `
@@ -442,22 +317,17 @@
             const alpa = state.attendance.filter(a => a.status === 'Alpa').length;
 
             c.innerHTML = `
-                <!-- Statistik Utama -->
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
                     ${statCard('Siswa', state.students.length, 'users', 'tosca')}
                     ${statCard('Hadir', hadir, 'check-circle', 'tosca')}
                     ${statCard('Jurnal', state.journals.length, 'book-open', 'tosca')}
                     ${statCard('Prestasi', state.achievements.length, 'award', 'tosca')}
                 </div>
-
-                <!-- Statistik Ketidakhadiran -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                     ${statCard('Sakit (Hari Ini)', sakit, 'thermometer', 'gold')}
                     ${statCard('Izin (Hari Ini)', izin, 'clipboard-edit', 'gold')}
                     ${statCard('Alpa (Hari Ini)', alpa, 'user-x', 'gold')}
                 </div>
-
-                <!-- Banner Portal -->
                 <div class="tosca-gradient p-12 rounded-5xl shadow-2xl relative overflow-hidden text-white group">
                     <div class="relative z-10">
                         <h3 class="text-4xl font-black mb-4 tracking-tighter uppercase">Portal Absensi <br/><span class="text-gold-light">Online Siswa</span></h3>
@@ -476,27 +346,117 @@
                 </div>`;
         }
 
+        // --- STREAMING_CHUNK:Updated Render Classes with Recap... ---
         function renderClasses(c) {
             c.innerHTML = `
-                <div class="bg-white p-10 rounded-5xl border border-slate-100 shadow-xl">
-                    <div class="flex justify-between items-center mb-10">
-                        <h3 class="text-xl font-black text-tosca uppercase tracking-tighter">Data Kelas</h3>
-                        <button onclick="window.openAddClass()" class="px-8 py-4 tosca-gradient text-white rounded-2xl font-black text-xs uppercase shadow-xl">+ Tambah Kelas</button>
+                <div class="bg-white p-6 md:p-10 rounded-5xl border border-slate-100 shadow-xl">
+                    <div class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
+                        <div>
+                            <h3 class="text-xl font-black text-tosca uppercase tracking-tighter">Rekap Absensi Per Kelas</h3>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Status Kehadiran Hari Ini</p>
+                        </div>
+                        <button onclick="window.openAddClass()" class="px-8 py-4 tosca-gradient text-white rounded-2xl font-black text-xs uppercase shadow-xl w-full md:w-auto">+ Tambah Kelas</button>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        ${state.classes.map(cl => `<div class="p-6 bg-slate-50 rounded-3xl border border-slate-100 flex justify-between items-center"><span class="font-black text-slate-700 uppercase">${cl.name}</span><button onclick="window.deleteData('classes', '${cl.id}')" class="text-rose-400 p-2 hover:bg-rose-50 rounded-xl transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div>`).join('')}
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        ${state.classes.map(cl => {
+                            const recap = window.getClassRecap(cl.id);
+                            return `
+                                <div class="bg-slate-50 p-8 rounded-4xl border border-slate-100 flex flex-col gap-6 relative overflow-hidden group">
+                                    <div class="flex justify-between items-center">
+                                        <h4 class="font-black text-xl text-slate-700 uppercase tracking-tighter">${cl.name}</h4>
+                                        <button onclick="window.deleteData('classes', '${cl.id}')" class="text-rose-300 hover:text-rose-500 p-2 transition-all">
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+
+                                    <div class="grid grid-cols-3 gap-3">
+                                        <div class="bg-white p-3 rounded-2xl text-center border border-slate-100">
+                                            <p class="text-[9px] font-black text-emerald-500 uppercase">Hadir</p>
+                                            <p class="text-lg font-black text-slate-800">${recap.hadir}</p>
+                                        </div>
+                                        <div class="bg-white p-3 rounded-2xl text-center border border-slate-100">
+                                            <p class="text-[9px] font-black text-amber-500 uppercase">Sakit</p>
+                                            <p class="text-lg font-black text-slate-800">${recap.sakit}</p>
+                                        </div>
+                                        <div class="bg-white p-3 rounded-2xl text-center border border-slate-100">
+                                            <p class="text-[9px] font-black text-blue-500 uppercase">Izin</p>
+                                            <p class="text-lg font-black text-slate-800">${recap.izin}</p>
+                                        </div>
+                                        <div class="bg-white p-3 rounded-2xl text-center border border-slate-100">
+                                            <p class="text-[9px] font-black text-rose-500 uppercase">Alpa</p>
+                                            <p class="text-lg font-black text-slate-800">${recap.alpa}</p>
+                                        </div>
+                                        <div class="bg-white p-3 rounded-2xl text-center border border-slate-100 col-span-2">
+                                            <p class="text-[9px] font-black text-slate-400 uppercase">Total Siswa</p>
+                                            <p class="text-lg font-black text-slate-800">${recap.total}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-2">
+                                        <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                                            <div class="bg-tosca h-full transition-all duration-1000" style="width: ${(recap.hadir / (recap.total || 1)) * 100}%"></div>
+                                        </div>
+                                        <p class="text-[9px] font-bold text-slate-400 mt-2 uppercase text-right tracking-widest">${Math.round((recap.hadir / (recap.total || 1)) * 100)}% Kehadiran</p>
+                                    </div>
+                                </div>`;
+                        }).join('')}
                     </div>
                 </div>`;
         }
 
-        function renderStudents(c) {
+        // --- STREAMING_CHUNK:Other Modals and Logic... ---
+        window.openAddClass = () => {
+            const b = document.getElementById('modal-body');
+            document.getElementById('modal-title').innerText = "Tambah Kelas Baru";
+            b.innerHTML = `
+                <div class="space-y-6">
+                    <input type="text" id="m-cl-name" placeholder="Contoh: VII-A, VIII-B, dll" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none border-2 border-transparent focus:border-tosca transition-all">
+                    <button onclick="window.saveClass()" class="w-full py-6 tosca-gradient text-white rounded-3xl font-black uppercase shadow-xl active:scale-95 transition-all">Simpan Kelas</button>
+                </div>`;
+            document.getElementById('modal').classList.remove('hidden');
+            lucide.createIcons();
+        };
+
+        window.openAddStudent = () => {
+            const b = document.getElementById('modal-body');
+            document.getElementById('modal-title').innerText = "Tambah Siswa";
+            b.innerHTML = `<div class="space-y-6">
+                <input type="text" id="m-st-name" placeholder="Nama Lengkap" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
+                <input type="text" id="m-st-nisn" placeholder="NISN" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
+                <select id="m-st-cl" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
+                    ${state.classes.map(cl => `<option value="${cl.id}">${cl.name}</option>`).join('')}
+                </select>
+                <input type="text" id="m-st-ph" placeholder="No WA (Contoh: 628123...)" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
+                <button onclick="window.saveStudent()" class="w-full py-6 tosca-gradient text-white rounded-3xl font-black uppercase shadow-xl">Simpan</button></div>`;
+            document.getElementById('modal').classList.remove('hidden');
+            lucide.createIcons();
+        };
+
+        window.openEditStudent = (id) => {
+            const s = state.students.find(x => x.id === id);
+            if (!s) return;
+            const b = document.getElementById('modal-body');
+            document.getElementById('modal-title').innerText = "Edit Data Siswa";
+            b.innerHTML = `<div class="space-y-6">
+                <input type="text" id="e-st-name" value="${s.name}" placeholder="Nama Lengkap" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
+                <input type="text" id="e-st-nisn" value="${s.nisn}" placeholder="NISN" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
+                <select id="e-st-cl" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
+                    ${state.classes.map(cl => `<option value="${cl.id}" ${s.class_id === cl.id ? 'selected' : ''}>${cl.name}</option>`).join('')}
+                </select>
+                <input type="text" id="e-st-ph" value="${s.parent_phone || ''}" placeholder="No WA Orang Tua" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
+                <button onclick="window.updateStudent('${id}')" class="w-full py-6 tosca-gradient text-white rounded-3xl font-black uppercase shadow-xl">Update Data</button></div>`;
+            document.getElementById('modal').classList.remove('hidden');
+            lucide.createIcons();
+        };
+
+        window.renderStudents = (c) => {
             c.innerHTML = `
-                <div class="bg-white p-10 rounded-5xl border border-slate-100 shadow-xl">
+                <div class="bg-white p-6 md:p-10 rounded-5xl border border-slate-100 shadow-xl">
                     <div class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
                         <h3 class="text-xl font-black text-tosca uppercase tracking-tighter">Data Siswa</h3>
-                        <div class="flex gap-3">
-                            <button onclick="document.getElementById('excel-input').click()" class="px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-xs uppercase">Import Excel</button>
-                            <button onclick="window.openAddStudent()" class="px-8 py-4 tosca-gradient text-white rounded-2xl font-black text-xs uppercase shadow-xl">+ Tambah Siswa</button>
+                        <div class="flex flex-wrap gap-3 w-full md:w-auto">
+                            <button onclick="document.getElementById('excel-input').click()" class="flex-1 px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-xs uppercase">Import Excel</button>
+                            <button onclick="window.openAddStudent()" class="flex-1 px-8 py-4 tosca-gradient text-white rounded-2xl font-black text-xs uppercase shadow-xl">+ Tambah</button>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -514,9 +474,9 @@
                             </div>`).join('')}
                     </div>
                 </div>`;
-        }
+        };
 
-        function renderAttendance(c) {
+        window.renderAttendance = (c) => {
             c.innerHTML = `
                 <div class="space-y-8">
                     <div class="flex bg-white p-2 rounded-5xl shadow-xl border border-slate-100 w-full max-w-md mx-auto">
@@ -525,14 +485,12 @@
                     </div>
                     ${state.absensiType === 'manual' ? renderManualSection() : renderQRSection()}
                 </div>`;
-        }
+        };
 
         function renderManualSection() {
             const filtered = state.students.filter(s => (state.selectedClass === '' || s.class_id === state.selectedClass));
             return `<div class="tosca-gradient p-6 md:p-12 rounded-5xl border border-teal-400 shadow-2xl overflow-x-auto">
-                <!-- Header Controls: Toggle & Filter -->
                 <div class="flex flex-col md:flex-row gap-8 mb-12 items-stretch md:items-end min-w-[300px]">
-                    <!-- Toggle Sesi (Masuk/Pulang) -->
                     <div class="flex-1">
                         <label class="text-[11px] font-black text-yellow-400 uppercase mb-4 block tracking-[0.2em]">Pilih Sesi Absensi</label>
                         <div class="flex bg-teal-900/40 p-2.5 rounded-3xl border border-white/10 gap-3">
@@ -546,7 +504,6 @@
                             </button>
                         </div>
                     </div>
-                    <!-- Filter Kelas -->
                     <div class="flex-1">
                         <label class="text-[11px] font-black text-yellow-400 uppercase mb-4 block tracking-[0.2em]">Filter Kelas</label>
                         <select onchange="window.state.selectedClass=this.value; window.fetchData()" 
@@ -557,7 +514,6 @@
                     </div>
                 </div>
 
-                <!-- Table Content -->
                 <table class="w-full min-w-[750px]">
                     <thead class="text-left text-[11px] font-black text-yellow-500 uppercase tracking-[0.3em] border-b border-white/10">
                         <tr>
@@ -609,6 +565,80 @@
             </div>`;
         }
 
+        // --- ATTENDANCE ACTIONS ---
+        window.markAttendance = async (sid, status, notes = null) => {
+            const today = new Date().toISOString().split('T')[0];
+            const existing = state.attendance.find(a => a.student_id === sid);
+            const payload = { student_id: sid, date: today, status: status || existing?.status || 'Hadir' };
+            if (notes !== null) payload.notes = notes;
+            const now = new Date().toISOString();
+            if (state.manualMode === 'check_in') payload.check_in = existing?.check_in || now;
+            else payload.check_out = existing?.check_out || now;
+            const { error } = await supabaseClient.from('attendance').upsert(payload, { onConflict: 'student_id,date' });
+            if (!error) { await window.fetchData(); window.notify("Tersimpan"); }
+        };
+
+        window.saveJournal = async () => {
+            const payload = {
+                teacher_name: document.getElementById('j-teacher').value,
+                subject: document.getElementById('j-subject').value,
+                class_id: document.getElementById('j-class').value,
+                notes: document.getElementById('j-notes').value
+            };
+            const { error } = await supabaseClient.from('journals').insert([payload]);
+            if (!error) { window.notify("Jurnal Disimpan"); window.closeModal(); await window.fetchData(); }
+        };
+
+        window.saveAchievement = async () => {
+            const payload = {
+                student_id: document.getElementById('a-student').value,
+                title: document.getElementById('a-title').value,
+                description: document.getElementById('a-desc').value
+            };
+            const { error } = await supabaseClient.from('achievements').insert([payload]);
+            if (!error) { window.notify("Prestasi Disimpan"); window.closeModal(); await window.fetchData(); }
+        };
+
+        window.updateSettings = async () => {
+            const sets = [
+                { key: 'check_in_start', value: document.getElementById('s-in-s').value },
+                { key: 'check_in_end', value: document.getElementById('s-in-e').value },
+                { key: 'check_out_start', value: document.getElementById('s-out-s').value },
+                { key: 'check_out_end', value: document.getElementById('s-out-e').value }
+            ];
+            const { error } = await supabaseClient.from('settings').upsert(sets, { onConflict: 'key' });
+            if (!error) window.notify("Pengaturan Diperbarui");
+        };
+
+        window.openAddJournal = () => {
+            const b = document.getElementById('modal-body');
+            document.getElementById('modal-title').innerText = "Catat Jurnal Guru";
+            b.innerHTML = `<div class="space-y-6">
+                <input type="text" id="j-teacher" placeholder="Nama Guru" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
+                <input type="text" id="j-subject" placeholder="Mata Pelajaran" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
+                <select id="j-class" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
+                    ${state.classes.map(cl => `<option value="${cl.id}">${cl.name}</option>`).join('')}
+                </select>
+                <textarea id="j-notes" placeholder="Ringkasan KBM / Catatan" class="w-full p-6 bg-slate-50 rounded-3xl font-bold outline-none h-32"></textarea>
+                <button onclick="window.saveJournal()" class="w-full py-6 tosca-gradient text-white rounded-3xl font-black uppercase shadow-xl">Simpan Jurnal</button></div>`;
+            document.getElementById('modal').classList.remove('hidden');
+            lucide.createIcons();
+        };
+
+        window.openAddAchievement = () => {
+            const b = document.getElementById('modal-body');
+            document.getElementById('modal-title').innerText = "Catat Prestasi";
+            b.innerHTML = `<div class="space-y-6">
+                <select id="a-student" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
+                    ${state.students.map(s => `<option value="${s.id}">${s.name} (${s.classes?.name})</option>`).join('')}
+                </select>
+                <input type="text" id="a-title" placeholder="Judul Prestasi / Penghargaan" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
+                <textarea id="a-desc" placeholder="Deskripsi Pencapaian" class="w-full p-6 bg-slate-50 rounded-3xl font-bold outline-none h-32"></textarea>
+                <button onclick="window.saveAchievement()" class="w-full py-6 gold-gradient text-white rounded-3xl font-black uppercase shadow-xl">Simpan Prestasi</button></div>`;
+            document.getElementById('modal').classList.remove('hidden');
+            lucide.createIcons();
+        };
+
         function renderJournals(c) {
             c.innerHTML = `
                 <div class="bg-white p-10 rounded-5xl shadow-xl">
@@ -621,7 +651,7 @@
                             <div class="bg-slate-50 p-8 rounded-4xl border border-slate-100 flex justify-between items-start">
                                 <div>
                                     <p class="font-black text-slate-800 text-lg uppercase">${j.subject}</p>
-                                    <p class="text-[10px] font-bold uppercase text-tosca">${j.teacher_name} • ${j.classes?.name}</p>
+                                    <p class="text-[10px] font-bold uppercase text-tosca">${j.teacher_name} • ${j.classes?.name || 'Tanpa Kelas'}</p>
                                     <p class="mt-4 text-slate-500 font-medium">${j.notes || '-'}</p>
                                 </div>
                                 <button onclick="window.deleteData('journals', '${j.id}')" class="text-rose-400 p-2 hover:bg-rose-50 rounded-xl transition-all"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
@@ -645,7 +675,7 @@
                                 <div class="relative z-10 flex justify-between">
                                     <div>
                                         <p class="font-black text-amber-900 text-lg uppercase">${a.title}</p>
-                                        <p class="text-[10px] font-bold uppercase text-amber-700/70">${a.students?.name}</p>
+                                        <p class="text-[10px] font-bold uppercase text-amber-700/70">${a.students?.name || 'Siswa'}</p>
                                         <p class="mt-4 text-amber-900/60 font-medium text-sm">${a.description || '-'}</p>
                                     </div>
                                     <button onclick="window.deleteData('achievements', '${a.id}')" class="text-rose-400 p-2 hover:bg-rose-100 rounded-xl transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
@@ -686,19 +716,6 @@
                 </div>`;
         }
 
-        // --- ATTENDANCE ACTIONS ---
-        window.markAttendance = async (sid, status, notes = null) => {
-            const today = new Date().toISOString().split('T')[0];
-            const existing = state.attendance.find(a => a.student_id === sid);
-            const payload = { student_id: sid, date: today, status: status || existing?.status || 'Hadir' };
-            if (notes !== null) payload.notes = notes;
-            const now = new Date().toISOString();
-            if (state.manualMode === 'check_in') payload.check_in = existing?.check_in || now;
-            else payload.check_out = existing?.check_out || now;
-            const { error } = await supabaseClient.from('attendance').upsert(payload, { onConflict: 'student_id,date' });
-            if (!error) { await window.fetchData(); window.notify("Tersimpan"); }
-        };
-
         window.toggleScanner = async () => {
             const btn = document.getElementById('scan-btn');
             if (state.scanner && state.scanner.getState() === 2) { 
@@ -714,7 +731,6 @@
                     if (s) { 
                         window.markAttendance(s.id, 'Hadir'); 
                         window.notify(`QR Terbaca: ${s.name}`); 
-                        // Play Beep? (Optional)
                     }
                 });
                 btn.innerText = "Matikan Kamera";
@@ -726,7 +742,7 @@
         window.sendWA = (name, phone, status, notes) => {
             if (!phone || phone === "null" || phone === "undefined") return window.notify("No WA Belum Diisi", "error");
             const session = state.manualMode === 'check_in' ? 'MASUK' : 'PULANG';
-            const msg = `*LAPORAN ABSENSI SISWA*\n\nAnanda: *${name}*\nStatus: *${status.toUpperCase()}* (${session})\nTanggal: ${new Intl.DateTimeFormat('id-ID', { dateStyle: 'full' }).format(new Date())}\n${notes ? '_Catatan: ' + notes + '_' : ''}\n\nTerima kasih.`;
+            const msg = `*Bismillah...LAPORAN ABSENSI SISWA*\n\nAnanda: *${name}*\nStatus: *${status.toUpperCase()}* (${session})\nTanggal: ${new Intl.DateTimeFormat('id-ID', { dateStyle: 'full' }).format(new Date())}\n${notes ? '_Catatan: ' + notes + '_' : ''}\n\nSyukron.`;
             window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
         };
 
