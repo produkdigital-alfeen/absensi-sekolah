@@ -61,8 +61,8 @@
                          alt="Logo" class="w-20 h-20 object-contain"
                          onerror="this.src='https://placehold.co/200x200/0d9488/ffffff?text=LOGO'">
                 </div>
-                <h1 class="text-lg font-black leading-tight tracking-tighter uppercase">Absensi Siswa</h1>
-                <h1 class="text-lg font-black text-gold-light leading-tight tracking-tighter uppercase">Online</h1>
+                <h1 class="text-lg font-black leading-tight tracking-tighter uppercase">Absensi Online 1.0</h1>
+                <h2 class="text-lg font-black text-gold-light leading-tight tracking-tighter uppercase">MA Al Qomariyah</h2>
             </div>
             
             <nav class="flex-1 p-6 space-y-2 overflow-y-auto custom-scroll" id="nav-links"></nav>
@@ -325,6 +325,94 @@
             };
         };
 
+        window.runAIAnalysis = () => {
+            const b = document.getElementById('modal-body');
+            document.getElementById('modal-title').innerText = "AI Intelligence Report";
+            
+            // Mengumpulkan data per kelas untuk dianalisis
+            const reportData = state.classes.map(cl => {
+                const recap = window.getClassRecap(cl.id);
+                const percent = recap.total > 0 ? Math.round((recap.hadir / recap.total) * 100) : 0;
+                return { name: cl.name, ...recap, percent };
+            });
+
+            const totalHadir = reportData.reduce((a, b) => a + b.hadir, 0);
+            const totalSiswa = state.students.length;
+            const avgPercent = totalSiswa > 0 ? Math.round((totalHadir / totalSiswa) * 100) : 0;
+
+            // Mencari Kelas Berprestasi & Bermasalah
+            const bestClass = [...reportData].sort((a, b) => b.percent - a.percent)[0];
+            const worstClass = [...reportData].sort((a, b) => a.percent - b.percent)[0];
+            const mostSick = [...reportData].sort((a, b) => b.sakit - a.sakit)[0];
+            const mostAlpa = [...reportData].sort((a, b) => b.alpa - a.alpa)[0];
+
+            let aiInsights = "";
+            let aiSuggestions = "";
+
+            // LOGIKA ANALISIS (FREE AI ENGINE)
+            if (avgPercent > 90) {
+                aiInsights = "Tingkat kehadiran sekolah sangat luar biasa hari ini.";
+                aiSuggestions = "Pertahankan ritme ini. Berikan apresiasi visual di mading untuk kelas dengan kehadiran 100%.";
+            } else if (avgPercent > 70) {
+                aiInsights = "Kehadiran stabil, namun terdapat beberapa titik lemah di kelas tertentu.";
+                aiSuggestions = "Lakukan pengecekan acak ke kelas yang memiliki angka Alpa > 2 orang.";
+            } else {
+                aiInsights = "Kehadiran di bawah standar. Terdeteksi penurunan kedisiplinan massal.";
+                aiSuggestions = "Segera kirimkan notifikasi WA massal kepada orang tua siswa yang berstatus Alpa.";
+            }
+
+            b.innerHTML = `
+                <div class="space-y-8">
+                    <div class="bg-teal-50 p-6 rounded-4xl border border-teal-100 flex items-center gap-6">
+                        <div class="w-20 h-20 bg-white rounded-3xl shadow-sm flex items-center justify-center text-3xl font-black text-tosca">${avgPercent}%</div>
+                        <div>
+                            <h4 class="font-black text-slate-800 uppercase tracking-tighter">Skor Kedisiplinan Sekolah</h4>
+                            <p class="text-xs font-medium text-slate-500">${aiInsights}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="p-5 bg-emerald-50 rounded-3xl border border-emerald-100">
+                            <p class="text-[9px] font-black text-emerald-600 uppercase mb-2">Kelas Terbaik</p>
+                            <p class="font-black text-slate-800 text-lg">${bestClass?.name || '-'}</p>
+                            <p class="text-[10px] font-bold text-emerald-500">${bestClass?.percent || 0}% Hadir</p>
+                        </div>
+                        <div class="p-5 bg-rose-50 rounded-3xl border border-rose-100">
+                            <p class="text-[9px] font-black text-rose-600 uppercase mb-2">Perhatian Khusus</p>
+                            <p class="font-black text-slate-800 text-lg">${mostAlpa?.alpa > 0 ? mostAlpa.name : '-'}</p>
+                            <p class="text-[10px] font-bold text-rose-500">${mostAlpa?.alpa || 0} Siswa Alpa</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-amber-50 p-6 rounded-4xl border border-amber-100">
+                        <div class="flex items-center gap-2 mb-4">
+                            <i data-lucide="brain-circuit" class="text-amber-600 w-5 h-5"></i>
+                            <h4 class="font-black text-amber-900 uppercase text-xs">Saran Strategis AI</h4>
+                        </div>
+                        <ul class="space-y-3">
+                            <li class="flex gap-3 text-xs font-bold text-amber-800/80 italic">
+                                <span class="w-5 h-5 bg-amber-200 rounded-full flex items-center justify-center shrink-0">1</span>
+                                ${aiSuggestions}
+                            </li>
+                            ${mostSick?.sakit > 1 ? `
+                            <li class="flex gap-3 text-xs font-bold text-amber-800/80 italic">
+                                <span class="w-5 h-5 bg-amber-200 rounded-full flex items-center justify-center shrink-0">2</span>
+                                Kelas ${mostSick.name} memiliki ${mostSick.sakit} siswa sakit. Sarankan ventilasi udara lebih baik.
+                            </li>` : ''}
+                            <li class="flex gap-3 text-xs font-bold text-amber-800/80 italic">
+                                <span class="w-5 h-5 bg-amber-200 rounded-full flex items-center justify-center shrink-0">${mostSick?.sakit > 1 ? '3' : '2'}</span>
+                                Gunakan fitur Kirim WA untuk ${mostAlpa?.name || 'siswa'} guna verifikasi alasan ketidakhadiran.
+                            </li>
+                        </ul>
+                    </div>
+
+                    <button onclick="window.closeModal()" class="w-full py-5 tosca-gradient text-white rounded-3xl font-black uppercase text-xs shadow-xl active:scale-95 transition-all">Selesai Membaca</button>
+                </div>`;
+            
+            document.getElementById('modal').classList.remove('hidden');
+            lucide.createIcons();
+        };
+
         // --- RENDERERS ---
         function render() {
             const nav = document.getElementById('nav-links');
@@ -400,64 +488,61 @@
                             <h3 class="text-xl font-black text-tosca uppercase tracking-tighter">Rekap Absensi Per Kelas</h3>
                             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Status Kehadiran Hari Ini</p>
                         </div>
-                        <button onclick="window.openAddClass()" class="px-8 py-4 tosca-gradient text-white rounded-2xl font-black text-xs uppercase shadow-xl w-full md:w-auto">+ Tambah Kelas</button>
+                        <div class="flex gap-3 w-full md:w-auto">
+                            <button onclick="window.runAIAnalysis()" class="flex-1 px-6 py-4 gold-gradient text-white rounded-2xl font-black text-[10px] uppercase shadow-lg flex items-center justify-center gap-2">
+                                <i data-lucide="sparkles" class="w-4 h-4"></i> Analisis AI
+                            </button>
+                            <button onclick="window.openAddClass()" class="flex-1 px-8 py-4 tosca-gradient text-white rounded-2xl font-black text-[10px] uppercase shadow-lg">+ Tambah Kelas</button>
+                        </div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        ${state.classes.map(cl => {
-                            const recap = window.getClassRecap(cl.id);
-                            return `
-                                <div class="bg-slate-50 p-8 rounded-4xl border border-slate-100 flex flex-col gap-6 relative overflow-hidden group">
-                                    <div class="flex justify-between items-center">
-                                        <h4 class="font-black text-xl text-slate-700 uppercase tracking-tighter">${cl.name}</h4>
-                                        <button onclick="window.deleteData('classes', '${cl.id}')" class="text-rose-300 hover:text-rose-500 p-2 transition-all">
-                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                        </button>
-                                    </div>
+                        ${state.students.map(s => `
+                            <div class="bg-slate-50 p-6 rounded-4xl border border-slate-100 flex items-center justify-between">
+                                <div class="min-w-0">
+                                    <p class="font-black text-slate-800 tracking-tight truncate">${s.name}</p>
+                                    <p class="text-[10px] font-bold uppercase text-tosca/70">${s.classes?.name || '-'} • ${s.nisn}</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="window.downloadQR('${s.nisn}', '${s.name}')" title="Download QR" class="p-3 bg-white text-tosca rounded-xl shadow-sm hover:gold-gradient hover:text-white transition-all"><i data-lucide="qr-code" class="w-4 h-4"></i></button>
+                                    <button onclick="window.openEditStudent('${s.id}')" title="Edit Data" class="p-3 bg-white text-gold rounded-xl shadow-sm hover:gold-gradient hover:text-white transition-all"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                                    <button onclick="window.deleteData('students', '${s.id}')" class="p-3 bg-white text-rose-500 rounded-xl shadow-sm hover:bg-rose-500 hover:text-white transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                </div>
+                            </div>`).join('')}
+                    </div>
+                </div>`;
+        };
 
-                                    <div class="grid grid-cols-3 gap-3">
-                                        <div class="bg-white p-3 rounded-2xl text-center border border-slate-100">
-                                            <p class="text-[9px] font-black text-emerald-500 uppercase">Hadir</p>
-                                            <p class="text-lg font-black text-slate-800">${recap.hadir}</p>
-                                        </div>
-                                        <div class="bg-white p-3 rounded-2xl text-center border border-slate-100">
-                                            <p class="text-[9px] font-black text-amber-500 uppercase">Sakit</p>
-                                            <p class="text-lg font-black text-slate-800">${recap.sakit}</p>
-                                        </div>
-                                        <div class="bg-white p-3 rounded-2xl text-center border border-slate-100">
-                                            <p class="text-[9px] font-black text-blue-500 uppercase">Izin</p>
-                                            <p class="text-lg font-black text-slate-800">${recap.izin}</p>
-                                        </div>
-                                        <div class="bg-white p-3 rounded-2xl text-center border border-slate-100">
-                                            <p class="text-[9px] font-black text-rose-500 uppercase">Alpa</p>
-                                            <p class="text-lg font-black text-slate-800">${recap.alpa}</p>
-                                        </div>
-                                        <div class="bg-white p-3 rounded-2xl text-center border border-slate-100 col-span-2">
-                                            <p class="text-[9px] font-black text-slate-400 uppercase">Total Siswa</p>
-                                            <p class="text-lg font-black text-slate-800">${recap.total}</p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="mt-2">
-                                        <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                                            <div class="bg-tosca h-full transition-all duration-1000" style="width: ${(recap.hadir / (recap.total || 1)) * 100}%"></div>
-                                        </div>
-                                        <p class="text-[9px] font-bold text-slate-400 mt-2 uppercase text-right tracking-widest">${Math.round((recap.hadir / (recap.total || 1)) * 100)}% Kehadiran</p>
-                                    </div>
-                                </div>`;
-                        }).join('')}
+        function renderStudents(c) {
+            c.innerHTML = `
+                <div class="bg-white p-10 rounded-5xl border border-slate-100 shadow-xl">
+                    <div class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
+                        <h3 class="text-xl font-black text-tosca uppercase tracking-tighter">Data Siswa</h3>
+                        <div class="flex gap-3">
+                            <button onclick="document.getElementById('excel-input').click()" class="px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-xs uppercase">Import Excel</button>
+                            <button onclick="window.openAddStudent()" class="px-8 py-4 tosca-gradient text-white rounded-2xl font-black text-xs uppercase shadow-xl">+ Tambah Siswa</button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        ${state.students.map(s => `
+                            <div class="bg-slate-50 p-6 rounded-4xl border border-slate-100 flex items-center justify-between">
+                                <div class="min-w-0">
+                                    <p class="font-black text-slate-800 tracking-tight truncate">${s.name}</p>
+                                    <p class="text-[10px] font-bold uppercase text-tosca/70">${s.classes?.name || '-'} • ${s.nisn}</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="window.downloadQR('${s.nisn}', '${s.name}')" title="Download QR" class="p-3 bg-white text-tosca rounded-xl shadow-sm hover:gold-gradient hover:text-white transition-all"><i data-lucide="qr-code" class="w-4 h-4"></i></button>
+                                    <button onclick="window.openEditStudent('${s.id}')" title="Edit Data" class="p-3 bg-white text-gold rounded-xl shadow-sm hover:gold-gradient hover:text-white transition-all"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                                    <button onclick="window.deleteData('students', '${s.id}')" class="p-3 bg-white text-rose-500 rounded-xl shadow-sm hover:bg-rose-500 hover:text-white transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                </div>
+                            </div>`).join('')}
                     </div>
                 </div>`;
         }
 
-        // --- STREAMING_CHUNK:Other Modals and Logic... ---
         window.openAddClass = () => {
             const b = document.getElementById('modal-body');
-            document.getElementById('modal-title').innerText = "Tambah Kelas Baru";
-            b.innerHTML = `
-                <div class="space-y-6">
-                    <input type="text" id="m-cl-name" placeholder="Contoh: VII-A, VIII-B, dll" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none border-2 border-transparent focus:border-tosca transition-all">
-                    <button onclick="window.saveClass()" class="w-full py-6 tosca-gradient text-white rounded-3xl font-black uppercase shadow-xl active:scale-95 transition-all">Simpan Kelas</button>
-                </div>`;
+            document.getElementById('modal-title').innerText = "Tambah Kelas";
+            b.innerHTML = `<div class="space-y-6"><input type="text" id="m-cl-name" placeholder="Nama Kelas" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none"><button onclick="window.saveClass()" class="w-full py-6 tosca-gradient text-white rounded-3xl font-black uppercase shadow-xl">Simpan</button></div>`;
             document.getElementById('modal').classList.remove('hidden');
             lucide.createIcons();
         };
@@ -492,33 +577,6 @@
                 <button onclick="window.updateStudent('${id}')" class="w-full py-6 tosca-gradient text-white rounded-3xl font-black uppercase shadow-xl">Update Data</button></div>`;
             document.getElementById('modal').classList.remove('hidden');
             lucide.createIcons();
-        };
-
-        window.renderStudents = (c) => {
-            c.innerHTML = `
-                <div class="bg-white p-6 md:p-10 rounded-5xl border border-slate-100 shadow-xl">
-                    <div class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
-                        <h3 class="text-xl font-black text-tosca uppercase tracking-tighter">Data Siswa</h3>
-                        <div class="flex flex-wrap gap-3 w-full md:w-auto">
-                            <button onclick="document.getElementById('excel-input').click()" class="flex-1 px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-xs uppercase">Import Excel</button>
-                            <button onclick="window.openAddStudent()" class="flex-1 px-8 py-4 tosca-gradient text-white rounded-2xl font-black text-xs uppercase shadow-xl">+ Tambah</button>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        ${state.students.map(s => `
-                            <div class="bg-slate-50 p-6 rounded-4xl border border-slate-100 flex items-center justify-between">
-                                <div class="min-w-0">
-                                    <p class="font-black text-slate-800 tracking-tight truncate">${s.name}</p>
-                                    <p class="text-[10px] font-bold uppercase text-tosca/70">${s.classes?.name || '-'} • ${s.nisn}</p>
-                                </div>
-                                <div class="flex gap-2">
-                                    <button onclick="window.downloadQR('${s.nisn}', '${s.name}')" title="Download QR" class="p-3 bg-white text-tosca rounded-xl shadow-sm hover:gold-gradient hover:text-white transition-all"><i data-lucide="qr-code" class="w-4 h-4"></i></button>
-                                    <button onclick="window.openEditStudent('${s.id}')" title="Edit Data" class="p-3 bg-white text-gold rounded-xl shadow-sm hover:gold-gradient hover:text-white transition-all"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
-                                    <button onclick="window.deleteData('students', '${s.id}')" class="p-3 bg-white text-rose-500 rounded-xl shadow-sm hover:bg-rose-500 hover:text-white transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                                </div>
-                            </div>`).join('')}
-                    </div>
-                </div>`;
         };
 
         window.renderAttendance = (c) => {
