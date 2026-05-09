@@ -8,17 +8,15 @@
 "theme_color": "#0d9488",
 "orientation": "portrait",
 "icons": [
-{
-"src": "https://jmtyhlpnzposejasobcv.supabase.co/storage/v1/object/public/logo/logo%20alqom%20baru.png",
-"sizes": "192x192",
-"type": "image/png",
-"purpose": "any maskable"
-},
-{
-"src": "https://jmtyhlpnzposejasobcv.supabase.co/storage/v1/object/public/logo/logo%20alqom%20baru.png",
-"sizes": "512x512",
-"type": "image/png",
-"purpose": "any maskable"
+  {
+    "src": "logo.png",
+    "sizes": "192x192",
+    "type": "image/png"
+  },
+  {
+    "src": "logo.png",
+    "sizes": "512x512",
+    "type": "image/png"
 }
 ]
 }
