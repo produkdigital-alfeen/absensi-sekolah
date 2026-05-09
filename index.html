@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ABSENSI SISWA ONLINE - PORTAL SEKOLAH</title>
+    <title>ABSENSI SISWA ONLINE</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0d9488">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -12,490 +14,682 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0d9488">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://jmtyhlpnzposejasobcv.supabase.co/storage/v1/object/public/logo/logo%20alqom%20baru.png">
-
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        tosca: '#0d9488', 
-                        gold: '#d97706',  
-                        'gold-light': '#fbbf24',
+                        tosca: '#0d9488',
+                        'tosca-dark': '#0f766e',
+                        gold: '#d97706',
+                        'gold-light': '#f59e0b',
+                    },
+                    borderRadius: {
+                        '4xl': '2rem',
+                        '5xl': '3rem',
                     }
                 }
             }
         }
     </script>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f0fdfa; -webkit-tap-highlight-color: transparent; }
-        .sidebar-item-active { background-color: #0d9488; color: white; box-shadow: 0 10px 15px -3px rgba(13, 148, 136, 0.3); }
-        .custom-scroll { scrollbar-width: thin; scrollbar-color: #0d9488 transparent; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; -webkit-tap-highlight-color: transparent; }
+        .tosca-gradient { background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%); }
+        .gold-gradient { background: linear-gradient(135deg, #d97706 0%, #fbbf24 100%); }
+        .sidebar-item-active { background: white; color: #0d9488; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
         .custom-scroll::-webkit-scrollbar { width: 5px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #0d9488; border-radius: 10px; }
-        .modal-overlay { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); }
-        #reader { border-radius: 24px; overflow: hidden; border: 4px solid #0d9488 !important; }
-        .gold-gradient { background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%); }
-        .tosca-gradient { background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%); }
+        .modal-overlay { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px); }
         
         @media (max-width: 768px) {
             .mobile-sidebar { transform: translateX(-100%); transition: transform 0.3s ease-in-out; }
             .mobile-sidebar.open { transform: translateX(0); }
-            .content-container { padding: 1rem !important; }
         }
     </style>
 </head>
 <body class="text-slate-800 antialiased overflow-hidden">
 
+    <!-- Mobile Overlay -->
     <div id="sidebar-overlay" onclick="window.toggleMobileMenu()" class="fixed inset-0 bg-slate-900/50 z-[45] hidden backdrop-blur-sm"></div>
 
     <div id="app" class="flex h-screen w-full overflow-hidden">
         <!-- Sidebar -->
-        <aside id="sidebar" class="w-72 bg-white border-r border-teal-100 fixed md:relative h-full z-50 flex flex-col shrink-0 shadow-2xl md:shadow-none mobile-sidebar">
-            <div class="p-6 border-b border-teal-50">
-                <div class="flex flex-col items-center text-center gap-3">
+        <aside id="sidebar" class="w-72 tosca-gradient text-white fixed md:relative h-full z-50 flex flex-col shrink-0 transition-transform mobile-sidebar shadow-2xl">
+            <div class="p-8 border-b border-white/10 text-center">
+                <div class="p-2 bg-white rounded-5xl shadow-xl border-4 border-gold inline-block mb-4">
                     <img id="school-logo" src="https://jmtyhlpnzposejasobcv.supabase.co/storage/v1/object/public/logo/logo%20alqom%20baru.png" 
-                         alt="Logo Sekolah" class="w-16 h-16 md:w-20 md:h-20 object-contain rounded-2xl shadow-lg border-2 border-gold"
+                         alt="Logo" class="w-20 h-20 object-contain"
                          onerror="this.src='https://placehold.co/200x200/0d9488/ffffff?text=LOGO'">
-                    <div>
-                        <h1 class="text-base md:text-lg font-black text-tosca leading-tight tracking-tighter uppercase">Absensi Siswa</h1>
-                        <h1 class="text-base md:text-lg font-black text-gold leading-tight tracking-tighter uppercase">Online</h1>
-                    </div>
                 </div>
+                <h1 class="text-lg font-black leading-tight tracking-tighter uppercase">Absensi Siswa</h1>
+                <h1 class="text-lg font-black text-gold-light leading-tight tracking-tighter uppercase">Online</h1>
             </div>
             
-            <nav class="flex-1 p-4 space-y-1.5 overflow-y-auto custom-scroll" id="nav-links"></nav>
+            <nav class="flex-1 p-6 space-y-2 overflow-y-auto custom-scroll" id="nav-links"></nav>
 
-            <div class="p-4 border-t border-teal-50">
-                <div class="bg-teal-50 p-4 rounded-2xl flex items-center gap-3">
-                    <div id="status-dot" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></div>
-                    <span id="status-text" class="text-[9px] font-black text-tosca uppercase">Menghubungkan...</span>
+            <div class="p-6 border-t border-white/10">
+                <div class="bg-white/10 p-4 rounded-2xl flex items-center gap-3 border border-white/5">
+                    <div id="status-dot" class="w-2.5 h-2.5 rounded-full bg-slate-400"></div>
+                    <span id="status-text" class="text-[10px] font-bold uppercase tracking-widest text-white/70">Connecting...</span>
                 </div>
             </div>
         </aside>
 
-        <!-- Main Area -->
-        <main class="flex-1 flex flex-col min-w-0 bg-slate-50 overflow-hidden">
-            <header class="bg-white/80 backdrop-blur-md border-b border-teal-100 p-4 flex justify-between items-center shrink-0 z-40">
-                <div class="flex items-center gap-3">
-                    <button onclick="window.toggleMobileMenu()" class="md:hidden p-2 text-tosca hover:bg-teal-50 rounded-xl">
-                        <i data-lucide="menu"></i>
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col min-w-0 bg-slate-50 overflow-hidden relative">
+            <header class="bg-white border-b border-slate-100 p-4 flex justify-between items-center shrink-0 z-40 shadow-sm">
+                <div class="flex items-center gap-4">
+                    <button onclick="window.toggleMobileMenu()" class="md:hidden p-3 bg-teal-50 text-tosca rounded-2xl">
+                        <i data-lucide="menu" class="w-5 h-5"></i>
                     </button>
-                    <h2 id="page-title" class="text-[10px] md:text-xs font-black text-teal-600/50 uppercase tracking-[0.2em]">Dashboard</h2>
+                    <div>
+                        <h2 id="page-title" class="text-[10px] font-black text-tosca/40 uppercase tracking-[0.3em]">Dashboard</h2>
+                        <p class="text-xs font-bold text-slate-400" id="current-date-display"></p>
+                    </div>
                 </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="window.fetchData()" class="p-2.5 bg-white border border-teal-100 rounded-xl text-tosca shadow-sm active:scale-95 transition-all">
+                <div class="flex items-center gap-3">
+                    <button onclick="window.fetchData()" class="p-3 bg-teal-50 text-tosca rounded-2xl hover:bg-teal-100 active:scale-90 transition-all">
                         <i data-lucide="refresh-cw" class="w-4 h-4"></i>
                     </button>
                 </div>
             </header>
 
-            <div id="content" class="flex-1 overflow-y-auto p-4 md:p-8 custom-scroll content-container"></div>
+            <div id="content" class="flex-1 overflow-y-auto p-4 md:p-10 custom-scroll"></div>
         </main>
     </div>
 
-    <!-- Modals -->
-    <div id="edit-modal" class="fixed inset-0 z-[100] modal-overlay hidden flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-lg rounded-[2rem] md:rounded-[2.5rem] shadow-2xl overflow-hidden border border-teal-100">
-            <div class="p-6 md:p-8 border-b border-teal-50 flex justify-between items-center bg-teal-50/50">
-                <h3 id="modal-title" class="text-lg md:text-xl font-black text-tosca">Edit Data</h3>
-                <button onclick="window.closeModal()" class="p-2 hover:bg-teal-100 rounded-full text-tosca/50"><i data-lucide="x"></i></button>
+    <!-- Modal Base -->
+    <div id="modal" class="fixed inset-0 z-[100] modal-overlay hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-xl rounded-5xl shadow-2xl overflow-hidden border border-teal-50">
+            <div class="p-8 tosca-gradient text-white flex justify-between items-center">
+                <h3 id="modal-title" class="text-xl font-black uppercase tracking-tighter">Tambah Data</h3>
+                <button onclick="window.closeModal()" class="p-2 hover:bg-white/20 rounded-full"><i data-lucide="x"></i></button>
             </div>
-            <div id="modal-body" class="p-6 md:p-8 max-h-[70vh] overflow-y-auto custom-scroll"></div>
+            <div id="modal-body" class="p-8 max-h-[75vh] overflow-y-auto custom-scroll bg-white"></div>
         </div>
     </div>
 
-    <div id="notification-container" class="fixed bottom-4 right-4 left-4 md:left-auto md:bottom-8 md:right-8 z-[200] flex flex-col gap-3"></div>
+    <div id="notification-container" class="fixed bottom-6 right-6 left-6 md:left-auto z-[200] flex flex-col gap-3"></div>
     <div id="qr-hidden-container" class="hidden"></div>
     <input type="file" id="excel-input" class="hidden" accept=".xlsx, .xls" onchange="window.handleExcelImport(event)">
 
     <script type="module">
         const SUPABASE_URL = 'https://jmtyhlpnzposejasobcv.supabase.co'; 
-        const SUPABASE_ANON_KEY = 'sb_publishable_OSleH0Z2_JjVnRx92O6c_Q_s19_ZGdL'; 
-        
-        const cleanURL = SUPABASE_URL.split('/rest/v1')[0];
-        const supabaseClient = window.supabase.createClient(cleanURL, SUPABASE_ANON_KEY);
+        const SUPABASE_ANON_KEY = 'sb_publishable_OSleH0Z2_JjVnRx92O6c_Q_s19_ZGdL';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         const state = {
-            classes: [], students: [], attendance: [], journals: [], achievements: [],
-            settings: { check_in_start: '06:00', check_in_end: '08:00', check_out_start: '14:00', check_out_end: '17:00' },
-            currentPage: 'dashboard', isLoading: true, manualMode: 'check_in', absensiType: 'manual',
-            currentSearch: '', selectedClass: '', scanner: null, isMenuOpen: false
+            currentPage: 'dashboard',
+            classes: [],
+            students: [],
+            attendance: [],
+            journals: [],
+            achievements: [],
+            settings: { 
+                check_in_start: '06:00', check_in_end: '08:00',
+                check_out_start: '14:00', check_out_end: '17:00'
+            },
+            isLoading: true,
+            isMenuOpen: false,
+            absensiType: 'manual', 
+            manualMode: 'check_in', 
+            selectedClass: '',
+            scanner: null
         };
-        window.state = state;
 
         const pages = [
             { id: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard' },
-            { id: 'classes', label: 'Data Kelas', icon: 'door-open' },
+            { id: 'classes', label: 'Data Kelas', icon: 'layers' },
             { id: 'students', label: 'Data Siswa', icon: 'users' },
-            { id: 'attendance', label: 'Absensi', icon: 'check-square' },
+            { id: 'attendance', label: 'Absensi', icon: 'user-check' },
             { id: 'journals', label: 'Jurnal Guru', icon: 'book-open' },
             { id: 'achievements', label: 'Prestasi', icon: 'award' },
             { id: 'settings', label: 'Pengaturan', icon: 'settings' }
         ];
 
-        window.toggleMobileMenu = () => {
-            state.isMenuOpen = !state.isMenuOpen;
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebar-overlay');
-            if (state.isMenuOpen) {
-                sidebar.classList.add('open');
-                overlay.classList.remove('hidden');
-            } else {
-                sidebar.classList.remove('open');
-                overlay.classList.add('hidden');
-            }
-        };
+        // --- GLOBAL FUNCTIONS BINDING ---
+        window.fetchData = async () => {
+            state.isLoading = true;
+            render();
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const [cl, st, att, jr, ach, sett] = await Promise.all([
+                    supabaseClient.from('classes').select('*').order('name'),
+                    supabaseClient.from('students').select('*, classes(name)').order('name'),
+                    supabaseClient.from('attendance').select('*').eq('date', today),
+                    supabaseClient.from('journals').select('*, classes(name)').order('created_at', { ascending: false }),
+                    supabaseClient.from('achievements').select('*, students(name)').order('created_at', { ascending: false }),
+                    supabaseClient.from('settings').select('*')
+                ]);
 
-        window.navigate = (pageId) => {
-            if (state.isMenuOpen) window.toggleMobileMenu();
-            if(state.scanner) { 
-                state.scanner.stop().then(() => {
-                    state.scanner = null;
-                    state.currentPage = pageId;
-                    render();
-                }).catch(() => {
-                    state.scanner = null;
-                    state.currentPage = pageId;
-                    render();
-                });
-            } else {
-                state.currentPage = pageId;
+                state.classes = cl.data || [];
+                state.students = st.data || [];
+                state.attendance = att.data || [];
+                state.journals = jr.data || [];
+                state.achievements = ach.data || [];
+                
+                if (sett.data) {
+                    sett.data.forEach(s => state.settings[s.key] = s.value);
+                }
+
+                document.getElementById('status-dot').className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse';
+                document.getElementById('status-text').innerText = 'Online';
+            } catch (e) {
+                console.error(e);
+                window.notify("Koneksi Database Gagal", "error");
+            } finally {
+                state.isLoading = false;
                 render();
             }
         };
 
-        window.fetchData = async () => {
-            state.isLoading = true; render();
-            try {
-                const today = new Date().toISOString().split('T')[0];
-                const [cl, st, at, se, jr, ac] = await Promise.all([
-                    supabaseClient.from('classes').select('*').order('name'),
-                    supabaseClient.from('students').select('*, classes(name)').order('name'),
-                    supabaseClient.from('attendance').select('*').eq('date', today),
-                    supabaseClient.from('settings').select('*'),
-                    supabaseClient.from('journals').select('*, classes(name)').order('created_at', { ascending: false }),
-                    supabaseClient.from('achievements').select('*, students(name)').order('created_at', { ascending: false })
-                ]);
-                
-                state.classes = cl.data || [];
-                state.students = st.data || [];
-                state.attendance = at.data || [];
-                state.journals = jr.data || [];
-                state.achievements = ac.data || [];
-                if (se.data) se.data.forEach(s => state.settings[s.key] = s.value);
-                
-                updateStatus('online');
-            } catch (e) {
-                updateStatus('error');
-                notify("Gagal memuat data", "error");
-            } finally {
-                state.isLoading = false; render();
+        window.navigate = async (pageId) => {
+            if (state.isMenuOpen) window.toggleMobileMenu();
+            if (state.scanner) {
+                try { if (state.scanner.getState() === 2) await state.scanner.stop(); } 
+                catch (err) { console.warn(err); } 
+                finally { state.scanner = null; }
+            }
+            state.currentPage = pageId;
+            render();
+        };
+
+        window.toggleMobileMenu = () => {
+            state.isMenuOpen = !state.isMenuOpen;
+            document.getElementById('sidebar').classList.toggle('open', state.isMenuOpen);
+            document.getElementById('sidebar-overlay').classList.toggle('hidden', !state.isMenuOpen);
+        };
+
+        window.closeModal = () => document.getElementById('modal').classList.add('hidden');
+        
+        window.notify = (msg, type = 'success') => {
+            const container = document.getElementById('notification-container');
+            const el = document.createElement('div');
+            el.className = `p-5 rounded-2xl text-white font-bold text-xs uppercase tracking-widest shadow-2xl flex items-center gap-3 transition-all transform translate-y-10 opacity-0 ${type === 'success' ? 'tosca-gradient' : 'bg-rose-500'}`;
+            el.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle' : 'alert-circle'}" class="w-4 h-4"></i> ${msg}`;
+            container.appendChild(el);
+            setTimeout(() => { el.classList.remove('translate-y-10', 'opacity-0'); }, 10);
+            setTimeout(() => { 
+                el.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => el.remove(), 500);
+            }, 3000);
+            lucide.createIcons();
+        };
+
+        // --- CRUD OPERATIONS ---
+        window.saveClass = async () => {
+            const name = document.getElementById('m-cl-name').value.trim();
+            if(!name) return;
+            const { error } = await supabaseClient.from('classes').insert([{ name }]);
+            if (!error) { window.notify("Kelas Disimpan"); window.closeModal(); await window.fetchData(); }
+        };
+
+        window.saveStudent = async () => {
+            const payload = { 
+                name: document.getElementById('m-st-name').value, 
+                nisn: document.getElementById('m-st-nisn').value, 
+                class_id: document.getElementById('m-st-cl').value, 
+                parent_phone: document.getElementById('m-st-ph').value 
+            };
+            const { error } = await supabaseClient.from('students').insert([payload]);
+            if (!error) { window.notify("Siswa Disimpan"); window.closeModal(); await window.fetchData(); }
+        };
+
+        window.updateStudent = async (id) => {
+            const payload = {
+                name: document.getElementById('e-st-name').value,
+                nisn: document.getElementById('e-st-nisn').value,
+                class_id: document.getElementById('e-st-cl').value,
+                parent_phone: document.getElementById('e-st-ph').value
+            };
+            const { error } = await supabaseClient.from('students').update(payload).eq('id', id);
+            if (!error) {
+                window.notify("Data Siswa Berhasil Diperbarui");
+                window.closeModal();
+                await window.fetchData();
+            } else {
+                window.notify("Gagal Update Data", "error");
             }
         };
 
+        window.saveJournal = async () => {
+            const payload = {
+                teacher_name: document.getElementById('j-teacher').value,
+                subject: document.getElementById('j-subject').value,
+                class_id: document.getElementById('j-class').value,
+                notes: document.getElementById('j-notes').value
+            };
+            const { error } = await supabaseClient.from('journals').insert([payload]);
+            if (!error) { window.notify("Jurnal Disimpan"); window.closeModal(); await window.fetchData(); }
+        };
+
+        window.saveAchievement = async () => {
+            const payload = {
+                student_id: document.getElementById('a-student').value,
+                title: document.getElementById('a-title').value,
+                description: document.getElementById('a-desc').value
+            };
+            const { error } = await supabaseClient.from('achievements').insert([payload]);
+            if (!error) { window.notify("Prestasi Disimpan"); window.closeModal(); await window.fetchData(); }
+        };
+
+        window.updateSettings = async () => {
+            const sets = [
+                { key: 'check_in_start', value: document.getElementById('s-in-s').value },
+                { key: 'check_in_end', value: document.getElementById('s-in-e').value },
+                { key: 'check_out_start', value: document.getElementById('s-out-s').value },
+                { key: 'check_out_end', value: document.getElementById('s-out-e').value }
+            ];
+            const { error } = await supabaseClient.from('settings').upsert(sets, { onConflict: 'key' });
+            if (!error) window.notify("Pengaturan Diperbarui");
+        };
+
+        window.deleteData = async (table, id) => {
+            if (!confirm("Apakah Anda yakin ingin menghapus data ini secara permanen?")) return;
+            try {
+                const { error } = await supabaseClient.from(table).delete().eq('id', id);
+                if (error) throw error;
+                window.notify("Data Berhasil Dihapus");
+                await window.fetchData();
+            } catch (e) {
+                window.notify("Gagal Menghapus: " + e.message, "error");
+            }
+        };
+
+        // --- MODAL HANDLERS ---
+        window.openAddClass = () => {
+            const b = document.getElementById('modal-body');
+            document.getElementById('modal-title').innerText = "Tambah Kelas";
+            b.innerHTML = `<div class="space-y-6"><input type="text" id="m-cl-name" placeholder="Nama Kelas" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none"><button onclick="window.saveClass()" class="w-full py-6 tosca-gradient text-white rounded-3xl font-black uppercase shadow-xl">Simpan</button></div>`;
+            document.getElementById('modal').classList.remove('hidden');
+            lucide.createIcons();
+        };
+
+        window.openAddStudent = () => {
+            const b = document.getElementById('modal-body');
+            document.getElementById('modal-title').innerText = "Tambah Siswa";
+            b.innerHTML = `<div class="space-y-6">
+                <input type="text" id="m-st-name" placeholder="Nama Lengkap" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
+                <input type="text" id="m-st-nisn" placeholder="NISN" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
+                <select id="m-st-cl" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
+                    ${state.classes.map(cl => `<option value="${cl.id}">${cl.name}</option>`).join('')}
+                </select>
+                <input type="text" id="m-st-ph" placeholder="No WA (Contoh: 628123...)" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
+                <button onclick="window.saveStudent()" class="w-full py-6 tosca-gradient text-white rounded-3xl font-black uppercase shadow-xl">Simpan</button></div>`;
+            document.getElementById('modal').classList.remove('hidden');
+            lucide.createIcons();
+        };
+
+        window.openEditStudent = (id) => {
+            const s = state.students.find(x => x.id === id);
+            if (!s) return;
+            const b = document.getElementById('modal-body');
+            document.getElementById('modal-title').innerText = "Edit Data Siswa";
+            b.innerHTML = `<div class="space-y-6">
+                <input type="text" id="e-st-name" value="${s.name}" placeholder="Nama Lengkap" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
+                <input type="text" id="e-st-nisn" value="${s.nisn}" placeholder="NISN" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
+                <select id="e-st-cl" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
+                    ${state.classes.map(cl => `<option value="${cl.id}" ${s.class_id === cl.id ? 'selected' : ''}>${cl.name}</option>`).join('')}
+                </select>
+                <input type="text" id="e-st-ph" value="${s.parent_phone || ''}" placeholder="No WA Orang Tua" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
+                <button onclick="window.updateStudent('${id}')" class="w-full py-6 tosca-gradient text-white rounded-3xl font-black uppercase shadow-xl">Update Data</button></div>`;
+            document.getElementById('modal').classList.remove('hidden');
+            lucide.createIcons();
+        };
+
+        window.openAddJournal = () => {
+            const b = document.getElementById('modal-body');
+            document.getElementById('modal-title').innerText = "Catat Jurnal Guru";
+            b.innerHTML = `<div class="space-y-6">
+                <input type="text" id="j-teacher" placeholder="Nama Guru" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
+                <input type="text" id="j-subject" placeholder="Mata Pelajaran" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
+                <select id="j-class" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
+                    ${state.classes.map(cl => `<option value="${cl.id}">${cl.name}</option>`).join('')}
+                </select>
+                <textarea id="j-notes" placeholder="Ringkasan KBM / Catatan" class="w-full p-6 bg-slate-50 rounded-3xl font-bold outline-none h-32"></textarea>
+                <button onclick="window.saveJournal()" class="w-full py-6 tosca-gradient text-white rounded-3xl font-black uppercase shadow-xl">Simpan Jurnal</button></div>`;
+            document.getElementById('modal').classList.remove('hidden');
+            lucide.createIcons();
+        };
+
+        window.openAddAchievement = () => {
+            const b = document.getElementById('modal-body');
+            document.getElementById('modal-title').innerText = "Catat Prestasi";
+            b.innerHTML = `<div class="space-y-6">
+                <select id="a-student" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
+                    ${state.students.map(s => `<option value="${s.id}">${s.name} (${s.classes?.name})</option>`).join('')}
+                </select>
+                <input type="text" id="a-title" placeholder="Judul Prestasi / Penghargaan" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none">
+                <textarea id="a-desc" placeholder="Deskripsi Pencapaian" class="w-full p-6 bg-slate-50 rounded-3xl font-bold outline-none h-32"></textarea>
+                <button onclick="window.saveAchievement()" class="w-full py-6 gold-gradient text-white rounded-3xl font-black uppercase shadow-xl">Simpan Prestasi</button></div>`;
+            document.getElementById('modal').classList.remove('hidden');
+            lucide.createIcons();
+        };
+
+        // --- EXCEL & QR ---
+        window.handleExcelImport = async (e) => {
+            const file = e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = async (evt) => {
+                const data = evt.target.result;
+                const workbook = XLSX.read(data, { type: 'binary' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(sheet);
+                
+                window.notify(`Memproses ${rows.length} data siswa...`);
+                for (let row of rows) {
+                    const cl = state.classes.find(c => c.name.toLowerCase() === (row.class_name || "").toLowerCase());
+                    if (cl) {
+                        await supabaseClient.from('students').insert([{
+                            name: row.name, nisn: String(row.nisn), class_id: cl.id, parent_phone: String(row.parent_phone || "")
+                        }]);
+                    }
+                }
+                window.notify("Import Selesai");
+                await window.fetchData();
+            };
+            reader.readAsBinaryString(file);
+        };
+
+        window.downloadQR = (nisn, name) => {
+            const container = document.getElementById('qr-hidden-container');
+            container.innerHTML = '';
+            new QRCode(container, { text: nisn, width: 300, height: 300 });
+            setTimeout(() => {
+                const img = container.querySelector('img');
+                const link = document.createElement('a');
+                link.download = `QR_${name}.png`; 
+                link.href = img.src; 
+                link.click();
+            }, 500);
+        };
+
+        // --- RENDERERS ---
         function render() {
             const nav = document.getElementById('nav-links');
             nav.innerHTML = pages.map(p => `
-                <button onclick="window.navigate('${p.id}')" class="w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all text-sm font-bold ${state.currentPage === p.id ? 'sidebar-item-active' : 'text-tosca/60 hover:bg-teal-50 active:bg-teal-100'}">
+                <button onclick="window.navigate('${p.id}')" class="w-full flex items-center gap-5 px-6 py-5 rounded-4xl transition-all text-xs font-black uppercase tracking-widest ${state.currentPage === p.id ? 'sidebar-item-active' : 'text-white/60 hover:bg-white/5'}">
                     <i data-lucide="${p.icon}" class="w-5 h-5"></i> ${p.label}
                 </button>
             `).join('');
-            document.getElementById('page-title').innerText = pages.find(p => p.id === state.currentPage).label;
-            window.renderContent();
-        }
-
-        window.renderContent = () => {
+            
+            document.getElementById('page-title').innerText = pages.find(p => p.id === state.currentPage)?.label || '';
+            document.getElementById('current-date-display').innerText = new Intl.DateTimeFormat('id-ID', { dateStyle: 'full' }).format(new Date());
+            
             const container = document.getElementById('content');
-            if(state.isLoading) {
-                container.innerHTML = `<div class="h-full flex items-center justify-center flex-col gap-4"><div class="w-10 h-10 border-4 border-teal-100 border-t-tosca animate-spin rounded-full"></div><p class="font-black text-tosca/30 uppercase text-[9px] tracking-widest">Sinkronisasi...</p></div>`;
+            if (state.isLoading) {
+                container.innerHTML = `<div class="h-full flex flex-col items-center justify-center gap-6"><div class="w-16 h-16 border-[6px] border-slate-100 border-t-tosca animate-spin rounded-full"></div><p class="font-black text-tosca text-[11px] uppercase tracking-widest">Memuat Data...</p></div>`;
                 return;
             }
-            const renderMap = {
-                dashboard: renderDashboard, classes: renderClasses, students: renderStudents,
-                attendance: renderAttendance, journals: renderJournals, achievements: renderAchievements, settings: renderSettings
-            };
-            renderMap[state.currentPage](container);
+            
+            switch(state.currentPage) {
+                case 'dashboard': renderDashboard(container); break;
+                case 'classes': renderClasses(container); break;
+                case 'students': renderStudents(container); break;
+                case 'attendance': renderAttendance(container); break;
+                case 'journals': renderJournals(container); break;
+                case 'achievements': renderAchievements(container); break;
+                case 'settings': renderSettings(container); break;
+            }
             lucide.createIcons();
-        };
+        }
 
         function renderDashboard(c) {
             const hadir = state.attendance.filter(a => a.status === 'Hadir').length;
             c.innerHTML = `
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
                     ${statCard('Siswa', state.students.length, 'users', 'tosca')}
                     ${statCard('Hadir', hadir, 'check-circle', 'gold')}
                     ${statCard('Jurnal', state.journals.length, 'book-open', 'tosca')}
                     ${statCard('Prestasi', state.achievements.length, 'award', 'gold')}
                 </div>
-                <div class="bg-white p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] shadow-xl border border-teal-50 flex flex-col lg:flex-row items-center gap-6 md:gap-10">
-                    <div class="flex-1 text-center lg:text-left">
-                        <span class="px-4 py-1.5 bg-teal-100 text-tosca text-[9px] font-black rounded-full uppercase tracking-widest mb-4 inline-block">MA Al Qomariah Portal</span>
-                        <h3 class="text-2xl md:text-4xl font-black mb-4 tracking-tighter leading-tight">Selamat Datang di <span class="text-tosca">Absensi Online</span></h3>
-                        <p class="text-slate-400 text-sm md:text-base font-medium leading-relaxed mb-6">Kelola kehadiran, jurnal harian, dan pantau prestasi siswa dengan mudah melalui smartphone Anda.</p>
-                        <div class="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-                            <button onclick="window.navigate('attendance')" class="px-6 py-4 tosca-gradient text-white rounded-2xl font-bold text-sm shadow-lg active:scale-95 transition-all">Mulai Absen</button>
-                            <button onclick="window.navigate('journals')" class="px-6 py-4 bg-white border-2 border-teal-100 text-tosca rounded-2xl font-bold text-sm active:scale-95 transition-all">Buka Jurnal</button>
-                        </div>
+                <div class="tosca-gradient p-12 rounded-5xl shadow-2xl relative overflow-hidden text-white group">
+                    <div class="relative z-10">
+                        <h3 class="text-4xl font-black mb-4 tracking-tighter uppercase">Portal Absensi <br/><span class="text-gold-light">Online Siswa</span></h3>
+                        <p class="text-white/70 font-medium mb-8 max-w-md">Pantau kehadiran, catatan harian guru, dan prestasi siswa secara real-time dari semua perangkat.</p>
+                        <button onclick="window.navigate('attendance')" class="px-10 py-5 bg-white text-tosca rounded-2xl font-black uppercase tracking-widest shadow-xl hover:scale-105 transition-all">Mulai Absensi</button>
                     </div>
-                </div>
-            `;
+                    <i data-lucide="school" class="absolute -right-10 -bottom-10 w-80 h-80 text-white/5 rotate-12 transition-transform duration-700"></i>
+                </div>`;
         }
 
         function statCard(t, v, i, theme) {
-            const iconBg = theme === 'tosca' ? 'tosca-gradient' : 'gold-gradient';
             return `
-                <div class="bg-white p-4 md:p-6 rounded-2xl md:rounded-[2rem] border border-teal-50 shadow-sm flex flex-col md:flex-row items-center md:items-center gap-3 md:gap-5 text-center md:text-left">
-                    <div class="w-10 h-10 md:w-14 md:h-14 ${iconBg} text-white rounded-xl md:rounded-2xl flex items-center justify-center shrink-0 shadow-lg"><i data-lucide="${i}" class="w-5 h-5 md:w-6 md:h-6"></i></div>
-                    <div class="min-w-0"><p class="text-[8px] md:text-[10px] font-black uppercase text-slate-400 mb-0.5 truncate">${t}</p><p class="text-lg md:text-2xl font-black text-slate-800">${v}</p></div>
+                <div class="bg-white p-8 rounded-4xl border border-slate-100 shadow-sm flex items-center gap-6 border-b-4 ${theme === 'tosca' ? 'border-tosca' : 'border-gold'}">
+                    <div class="w-16 h-16 ${theme === 'tosca' ? 'tosca-gradient' : 'gold-gradient'} text-white rounded-3xl flex items-center justify-center shadow-lg"><i data-lucide="${i}" class="w-8 h-8"></i></div>
+                    <div><p class="text-[10px] font-black uppercase text-slate-400 tracking-tighter">${t}</p><p class="text-3xl font-black text-slate-800 tracking-tighter">${v}</p></div>
                 </div>`;
         }
 
-        function renderAttendance(c) {
+        function renderClasses(c) {
             c.innerHTML = `
-                <div class="space-y-6">
-                    <div class="flex bg-white p-1.5 rounded-2xl shadow-sm border border-teal-50 w-full max-w-sm mx-auto">
-                        <button onclick="window.state.absensiType='manual'; window.renderContent()" class="flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${state.absensiType === 'manual' ? 'tosca-gradient text-white shadow-lg' : 'text-tosca/50'}">Manual SIA</button>
-                        <button onclick="window.state.absensiType='qr'; window.renderContent()" class="flex-1 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${state.absensiType === 'qr' ? 'tosca-gradient text-white shadow-lg' : 'text-tosca/50'}">QR Scanner</button>
+                <div class="bg-white p-10 rounded-5xl border border-slate-100 shadow-xl">
+                    <div class="flex justify-between items-center mb-10">
+                        <h3 class="text-xl font-black text-tosca uppercase tracking-tighter">Data Kelas</h3>
+                        <button onclick="window.openAddClass()" class="px-8 py-4 tosca-gradient text-white rounded-2xl font-black text-xs uppercase shadow-xl">+ Tambah Kelas</button>
                     </div>
-                    ${state.absensiType === 'manual' ? renderManualAttendance() : renderQRScanner()}
-                </div>`;
-        }
-
-        function renderManualAttendance() {
-            const filtered = state.students.filter(s => s.class_id === state.selectedClass);
-            return `
-                <div class="bg-white p-5 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-teal-50 shadow-xl">
-                    <div class="flex flex-col gap-4 mb-6 md:mb-8">
-                        <div class="flex bg-teal-50 p-1.5 rounded-xl w-full">
-                            <button onclick="window.state.manualMode='check_in'; window.renderContent()" class="flex-1 py-2 text-[10px] font-black rounded-lg transition-all ${state.manualMode === 'check_in' ? 'bg-white shadow text-tosca' : 'text-tosca/40'}">SESI MASUK</button>
-                            <button onclick="window.state.manualMode='check_out'; window.renderContent()" class="flex-1 py-2 text-[10px] font-black rounded-lg transition-all ${state.manualMode === 'check_out' ? 'bg-white shadow text-tosca' : 'text-tosca/40'}">SESI PULANG</button>
-                        </div>
-                        <select onchange="window.state.selectedClass=this.value; window.renderContent()" class="w-full p-4 bg-teal-50 border-none rounded-xl font-bold text-xs text-tosca outline-none shadow-inner appearance-none">
-                            <option value="">-- Pilih Kelas --</option>
-                            ${state.classes.map(cl => `<option value="${cl.id}" ${state.selectedClass === cl.id ? 'selected' : ''}>${cl.name}</option>`).join('')}
-                        </select>
-                    </div>
-                    
-                    <div class="overflow-x-auto -mx-5 px-5">
-                        <table class="w-full min-w-[600px]">
-                            <thead><tr class="text-left text-[9px] font-black text-tosca/40 uppercase tracking-widest border-b border-teal-50"><th class="py-3">Siswa</th><th class="py-3 text-center">Status</th><th class="py-3">Keterangan</th><th class="py-3 text-right">WA</th></tr></thead>
-                            <tbody class="divide-y divide-teal-50">
-                                ${filtered.map(s => {
-                                    const att = state.attendance.find(a => a.student_id === s.id);
-                                    return `<tr class="active:bg-teal-50 transition-all">
-                                        <td class="py-4"><p class="font-bold text-xs md:text-sm text-slate-700 leading-tight">${s.name}</p><p class="text-[8px] font-bold text-slate-400 mt-0.5">${s.nisn}</p></td>
-                                        <td class="py-4 text-center">
-                                            <select onchange="window.markAttendance('${s.id}', this.value)" class="p-2 bg-white border border-teal-100 rounded-lg text-[9px] font-black uppercase text-tosca shadow-sm outline-none">
-                                                <option value="Hadir" ${att?.status === 'Hadir' ? 'selected' : ''}>Hadir</option>
-                                                <option value="Sakit" ${att?.status === 'Sakit' ? 'selected' : ''}>Sakit</option>
-                                                <option value="Izin" ${att?.status === 'Izin' ? 'selected' : ''}>Izin</option>
-                                                <option value="Alpa" ${att?.status === 'Alpa' ? 'selected' : ''}>Alpa</option>
-                                            </select>
-                                        </td>
-                                        <td class="py-4"><input placeholder="..." value="${att?.notes || ''}" onblur="window.markAttendance('${s.id}', null, this.value)" class="w-full p-2 bg-teal-50 border-none rounded-lg text-[9px] font-bold outline-none focus:bg-white focus:ring-1 ring-teal-200"></td>
-                                        <td class="py-4 text-right"><button onclick="window.sendWA('${s.name}', '${s.parent_phone}', '${att?.status || 'Hadir'}', '${att?.notes || ''}')" class="p-2.5 bg-teal-50 text-tosca rounded-lg active:tosca-gradient active:text-white transition-all"><i data-lucide="message-circle" class="w-4 h-4"></i></button></td>
-                                    </tr>`;
-                                }).join('')}
-                            </tbody>
-                        </table>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        ${state.classes.map(cl => `<div class="p-6 bg-slate-50 rounded-3xl border border-slate-100 flex justify-between items-center"><span class="font-black text-slate-700 uppercase">${cl.name}</span><button onclick="window.deleteData('classes', '${cl.id}')" class="text-rose-400 p-2 hover:bg-rose-50 rounded-xl transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div>`).join('')}
                     </div>
                 </div>`;
         }
-
-        window.markAttendance = async (sid, status, notes = null) => {
-            const today = new Date().toISOString().split('T')[0];
-            const existing = state.attendance.find(a => a.student_id === sid);
-            const payload = { 
-                student_id: sid, 
-                date: today, 
-                status: status || existing?.status || 'Hadir'
-            };
-            
-            if(notes !== null) payload.notes = notes;
-            const now = new Date().toISOString();
-            if(state.manualMode === 'check_in') payload.check_in = existing?.check_in || now;
-            else payload.check_out = existing?.check_out || now;
-
-            try { 
-                await supabaseClient.from('attendance').upsert(payload, { onConflict: 'student_id,date' }); 
-                const idx = state.attendance.findIndex(a => a.student_id === sid);
-                if(idx > -1) state.attendance[idx] = {...state.attendance[idx], ...payload};
-                else state.attendance.push(payload);
-                notify("Berhasil disimpan", "success"); 
-            } catch (e) { notify("Gagal simpan", "error"); }
-        };
-
-        window.sendWA = (name, phone, status, notes) => {
-            if(!phone) return notify("No HP Kosong", "error");
-            const session = state.manualMode === 'check_in' ? 'MASUK' : 'PULANG';
-            const msg = `*INFO ABSENSI*\nAnanda *${name}* hari ini tercatat Absen *${session}* dengan status: *${status.toUpperCase()}*.\n${notes ? '_Ket: ' + notes + '_' : ''}\n\nTerima kasih.`;
-            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
-        };
-
-        function renderQRScanner() {
-            return `
-                <div class="bg-white p-6 md:p-10 rounded-[2rem] border border-teal-50 shadow-xl text-center">
-                    <div id="reader" class="mx-auto w-full max-w-[300px] aspect-square mb-6 bg-teal-50 flex items-center justify-center">
-                        <i data-lucide="camera" class="w-10 h-10 text-tosca/20"></i>
-                    </div>
-                    <button id="scan-btn" onclick="window.startScanner()" class="w-full max-w-xs px-8 py-4 tosca-gradient text-white rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all">Mulai Scan</button>
-                </div>`;
-        }
-
-        window.startScanner = async () => {
-            const readerEl = document.getElementById('reader');
-            const btn = document.getElementById('scan-btn');
-            if (!readerEl) return;
-            
-            try {
-                if (state.scanner) {
-                    await state.scanner.stop();
-                    state.scanner = null;
-                    btn.innerText = "MULAI SCAN";
-                    btn.classList.replace('bg-rose-500', 'tosca-gradient');
-                    return;
-                }
-                
-                state.scanner = new Html5Qrcode("reader");
-                await state.scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, window.onScanSuccess);
-                btn.innerText = "BERHENTIKAN SCAN";
-                btn.classList.add('bg-rose-500');
-                btn.classList.remove('tosca-gradient');
-                notify("Kamera Aktif");
-            } catch (err) { notify("Gagal akses kamera", "error"); }
-        };
-
-        window.onScanSuccess = async (decodedText) => {
-            const student = state.students.find(s => s.nisn === decodedText);
-            if (!student) return notify("QR Tidak Dikenali", "error");
-            
-            if (state.scanner) { 
-                state.scanner.pause(); 
-                setTimeout(() => state.scanner && state.scanner.resume(), 2000); 
-            }
-            await window.markAttendance(student.id, 'Hadir');
-            notify(`Absen: ${student.name}`);
-        };
 
         function renderStudents(c) {
             c.innerHTML = `
-                <div class="bg-white p-5 rounded-[2rem] border border-teal-50 shadow-sm">
-                    <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                        <h3 class="text-base font-black text-tosca uppercase">Database Siswa</h3>
-                        <div class="flex gap-2 w-full sm:w-auto">
-                            <button onclick="window.openImportExcel()" class="flex-1 sm:flex-none px-4 py-3 bg-teal-50 text-tosca rounded-xl font-black text-[9px] uppercase border border-teal-100">Import</button>
-                            <button onclick="window.openAddStudent()" class="flex-1 sm:flex-none px-4 py-3 tosca-gradient text-white rounded-xl font-black text-[9px] uppercase shadow-lg">+ Siswa</button>
+                <div class="bg-white p-10 rounded-5xl border border-slate-100 shadow-xl">
+                    <div class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
+                        <h3 class="text-xl font-black text-tosca uppercase tracking-tighter">Data Siswa</h3>
+                        <div class="flex gap-3">
+                            <button onclick="document.getElementById('excel-input').click()" class="px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-xs uppercase">Import Excel</button>
+                            <button onclick="window.openAddStudent()" class="px-8 py-4 tosca-gradient text-white rounded-2xl font-black text-xs uppercase shadow-xl">+ Tambah Siswa</button>
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         ${state.students.map(s => `
-                            <div class="bg-teal-50/30 p-4 rounded-2xl border border-teal-50 flex items-center justify-between group">
+                            <div class="bg-slate-50 p-6 rounded-4xl border border-slate-100 flex items-center justify-between">
                                 <div class="min-w-0">
-                                    <p class="font-bold text-xs text-slate-700 truncate">${s.name}</p>
-                                    <p class="text-[8px] font-black uppercase text-tosca/60 truncate">${s.classes?.name} • ${s.nisn}</p>
+                                    <p class="font-black text-slate-800 tracking-tight truncate">${s.name}</p>
+                                    <p class="text-[10px] font-bold uppercase text-tosca/70">${s.classes?.name || '-'} • ${s.nisn}</p>
                                 </div>
-                                <div class="flex gap-1 shrink-0">
-                                    <button onclick="window.downloadQR('${s.nisn}', '${s.name}')" class="p-2 bg-white text-tosca rounded-lg shadow-sm active:bg-teal-100"><i data-lucide="download" class="w-3.5 h-3.5"></i></button>
-                                    <button onclick="window.deleteData('students', '${s.id}')" class="p-2 bg-white text-rose-500 rounded-lg shadow-sm active:bg-rose-50"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                                <div class="flex gap-2">
+                                    <button onclick="window.downloadQR('${s.nisn}', '${s.name}')" title="Download QR" class="p-3 bg-white text-tosca rounded-xl shadow-sm hover:gold-gradient hover:text-white transition-all"><i data-lucide="qr-code" class="w-4 h-4"></i></button>
+                                    <button onclick="window.openEditStudent('${s.id}')" title="Edit Data" class="p-3 bg-white text-gold rounded-xl shadow-sm hover:gold-gradient hover:text-white transition-all"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                                    <button onclick="window.deleteData('students', '${s.id}')" class="p-3 bg-white text-rose-500 rounded-xl shadow-sm hover:bg-rose-500 hover:text-white transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                                 </div>
                             </div>`).join('')}
                     </div>
                 </div>`;
         }
 
-        window.downloadQR = (nisn, name) => {
-            const container = document.getElementById('qr-hidden-container');
-            container.innerHTML = '';
-            new QRCode(container, { text: nisn, width: 512, height: 512, colorDark: "#0d9488" });
-            setTimeout(() => {
-                const canvas = container.querySelector('canvas');
-                const link = document.createElement('a');
-                link.download = `QR_${nisn}.png`;
-                link.href = canvas.toDataURL();
-                link.click();
-                notify("QR Disimpan");
-            }, 300);
-        };
+        function renderAttendance(c) {
+            c.innerHTML = `
+                <div class="space-y-8">
+                    <div class="flex bg-white p-2 rounded-5xl shadow-xl border border-slate-100 w-full max-w-md mx-auto">
+                        <button onclick="window.state.absensiType='manual'; window.fetchData()" class="flex-1 py-4 rounded-4xl text-xs font-black uppercase transition-all ${state.absensiType === 'manual' ? 'tosca-gradient text-white' : 'text-slate-400'}">Manual</button>
+                        <button onclick="window.state.absensiType='qr'; window.fetchData()" class="flex-1 py-4 rounded-4xl text-xs font-black uppercase transition-all ${state.absensiType === 'qr' ? 'tosca-gradient text-white' : 'text-slate-400'}">Scan QR</button>
+                    </div>
+                    ${state.absensiType === 'manual' ? renderManualSection() : renderQRSection()}
+                </div>`;
+        }
 
-        window.deleteData = async (table, id) => {
-            if(!confirm("Hapus data ini?")) return;
-            try { 
-                await supabaseClient.from(table).delete().eq('id', id); 
-                notify("Data Dihapus", "success"); window.fetchData(); 
-            } catch (e) { notify("Gagal hapus", "error"); }
-        };
+        function renderManualSection() {
+            const filtered = state.students.filter(s => (state.selectedClass === '' || s.class_id === state.selectedClass));
+            return `<div class="bg-white p-10 rounded-5xl border border-slate-100 shadow-xl overflow-x-auto">
+                <div class="flex flex-col md:flex-row gap-6 mb-10 items-end min-w-[600px]">
+                    <div class="flex-1">
+                        <label class="text-[10px] font-black text-tosca uppercase mb-3 block">Sesi</label>
+                        <div class="flex bg-slate-50 p-2 rounded-2xl">
+                            <button onclick="window.state.manualMode='check_in'; window.fetchData()" class="flex-1 py-3 text-[10px] font-black rounded-xl ${state.manualMode === 'check_in' ? 'bg-white shadow text-tosca' : 'text-slate-400'} uppercase">Masuk</button>
+                            <button onclick="window.state.manualMode='check_out'; window.fetchData()" class="flex-1 py-3 text-[10px] font-black rounded-xl ${state.manualMode === 'check_out' ? 'bg-white shadow text-tosca' : 'text-slate-400'} uppercase">Pulang</button>
+                        </div>
+                    </div>
+                    <div class="flex-1">
+                        <label class="text-[10px] font-black text-tosca uppercase mb-3 block">Filter Kelas</label>
+                        <select onchange="window.state.selectedClass=this.value; window.fetchData()" class="w-full p-4 bg-slate-50 rounded-2xl font-black text-sm outline-none">
+                            <option value="">Semua Kelas</option>
+                            ${state.classes.map(cl => `<option value="${cl.id}" ${state.selectedClass === cl.id ? 'selected' : ''}>${cl.name}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+                <table class="w-full min-w-[700px]">
+                    <thead class="text-left text-[10px] font-black text-slate-300 uppercase tracking-widest border-b border-slate-50">
+                        <tr><th class="pb-6">Siswa</th><th class="pb-6 text-center">Status</th><th class="pb-6">Catatan</th><th class="pb-6 text-right">WA</th></tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        ${filtered.map(s => {
+                            const att = state.attendance.find(a => a.student_id === s.id);
+                            return `<tr>
+                                <td class="py-6 font-black text-slate-800">${s.name}</td>
+                                <td class="py-6 text-center">
+                                    <select onchange="window.markAttendance('${s.id}', this.value)" class="p-3 border border-slate-100 rounded-2xl text-[10px] font-black uppercase text-tosca bg-white shadow-sm">
+                                        <option value="Hadir" ${att?.status === 'Hadir' ? 'selected' : ''}>Hadir</option>
+                                        <option value="Sakit" ${att?.status === 'Sakit' ? 'selected' : ''}>Sakit</option>
+                                        <option value="Izin" ${att?.status === 'Izin' ? 'selected' : ''}>Izin</option>
+                                        <option value="Alpa" ${att?.status === 'Alpa' ? 'selected' : ''}>Alpa</option>
+                                    </select>
+                                </td>
+                                <td class="py-6"><input placeholder="Catatan..." value="${att?.notes || ''}" onblur="window.markAttendance('${s.id}', null, this.value)" class="w-full p-4 bg-slate-50 rounded-2xl text-[10px] font-bold outline-none"></td>
+                                <td class="py-6 text-right"><button onclick="window.sendWA('${s.name}', '${s.parent_phone}', '${att?.status || 'Hadir'}', '${att?.notes || ''}')" class="p-4 bg-emerald-50 text-emerald-600 rounded-4xl hover:bg-emerald-600 hover:text-white transition-all"><i data-lucide="message-circle" class="w-4 h-4"></i></button></td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>`;
+        }
+
+        function renderQRSection() {
+            return `<div class="bg-white p-12 rounded-5xl border border-slate-100 shadow-2xl text-center max-w-lg mx-auto">
+                <div id="reader" class="mx-auto w-full aspect-square mb-10 rounded-5xl overflow-hidden border-8 border-slate-50 flex items-center justify-center bg-slate-50"><i data-lucide="scan" class="w-20 h-20 text-tosca/10"></i></div>
+                <button id="scan-btn" onclick="window.toggleScanner()" class="w-full py-6 tosca-gradient text-white rounded-3xl font-black uppercase shadow-2xl">Aktifkan Kamera</button>
+            </div>`;
+        }
 
         function renderJournals(c) {
             c.innerHTML = `
-                <div class="space-y-4">
-                    <div class="flex flex-col sm:flex-row justify-between items-center bg-white p-5 rounded-2xl border border-teal-50 shadow-sm gap-4">
-                        <h3 class="text-base font-black text-tosca uppercase">Jurnal Guru</h3>
-                        <button onclick="window.openAddJournal()" class="w-full sm:w-auto px-6 py-3 tosca-gradient text-white rounded-xl font-black text-[10px] uppercase shadow-lg">+ Buat Jurnal</button>
+                <div class="bg-white p-10 rounded-5xl shadow-xl">
+                    <div class="flex justify-between items-center mb-10">
+                        <h3 class="text-xl font-black text-tosca uppercase tracking-tighter">Jurnal Guru</h3>
+                        <button onclick="window.openAddJournal()" class="px-8 py-4 tosca-gradient text-white rounded-2xl font-black text-xs uppercase shadow-xl">+ Catat Jurnal</button>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        ${state.journals.map(j => `
-                            <div class="bg-white border border-teal-100 p-5 rounded-2xl shadow-sm">
-                                <h4 class="font-black text-slate-700 text-sm">${j.subject}</h4>
-                                <p class="text-[10px] font-bold text-gold uppercase mt-1 mb-2">${j.teacher_name}</p>
-                                <p class="text-[10px] text-slate-500 italic">"${j.notes || '-'}"</p>
+                    <div class="space-y-6">
+                        ${state.journals.length ? state.journals.map(j => `
+                            <div class="bg-slate-50 p-8 rounded-4xl border border-slate-100 flex justify-between items-start">
+                                <div>
+                                    <p class="font-black text-slate-800 text-lg uppercase">${j.subject}</p>
+                                    <p class="text-[10px] font-bold uppercase text-tosca">${j.teacher_name} • ${j.classes?.name}</p>
+                                    <p class="mt-4 text-slate-500 font-medium">${j.notes || '-'}</p>
+                                </div>
+                                <button onclick="window.deleteData('journals', '${j.id}')" class="text-rose-400 p-2 hover:bg-rose-50 rounded-xl transition-all"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
                             </div>
-                        `).join('')}
+                        `).join('') : '<p class="text-center text-slate-400 font-black uppercase text-xs py-10 tracking-widest">Belum ada catatan jurnal</p>'}
                     </div>
                 </div>`;
         }
 
         function renderAchievements(c) {
             c.innerHTML = `
-                <div class="space-y-4">
-                    <div class="flex justify-between items-center bg-white p-5 rounded-2xl border border-teal-50 shadow-sm">
-                        <h3 class="text-base font-black text-gold uppercase">Daftar Prestasi</h3>
-                        <button onclick="window.openAddAchievement()" class="px-4 py-3 gold-gradient text-white rounded-xl font-black text-[9px] uppercase shadow-lg">+ Prestasi</button>
+                <div class="bg-white p-10 rounded-5xl shadow-xl">
+                    <div class="flex justify-between items-center mb-10">
+                        <h3 class="text-xl font-black text-gold uppercase tracking-tighter">Prestasi Siswa</h3>
+                        <button onclick="window.openAddAchievement()" class="px-8 py-4 gold-gradient text-white rounded-2xl font-black text-xs uppercase shadow-xl">+ Catat Prestasi</button>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        ${state.achievements.map(a => `
-                            <div class="bg-amber-50/50 border border-amber-100 p-5 rounded-2xl flex items-start gap-3">
-                                <div class="w-10 h-10 gold-gradient rounded-xl flex items-center justify-center text-white shrink-0"><i data-lucide="award" class="w-5 h-5"></i></div>
-                                <div><h4 class="font-black text-slate-700 text-sm">${a.title}</h4><p class="text-[9px] font-bold text-tosca uppercase mt-1">${a.students?.name}</p></div>
-                            </div>`).join('')}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        ${state.achievements.length ? state.achievements.map(a => `
+                            <div class="bg-amber-50 p-8 rounded-4xl border border-amber-100 relative overflow-hidden group">
+                                <i data-lucide="award" class="absolute -right-5 -bottom-5 w-24 h-24 text-amber-200/50 group-hover:scale-125 transition-transform duration-700"></i>
+                                <div class="relative z-10 flex justify-between">
+                                    <div>
+                                        <p class="font-black text-amber-900 text-lg uppercase">${a.title}</p>
+                                        <p class="text-[10px] font-bold uppercase text-amber-700/70">${a.students?.name}</p>
+                                        <p class="mt-4 text-amber-900/60 font-medium text-sm">${a.description || '-'}</p>
+                                    </div>
+                                    <button onclick="window.deleteData('achievements', '${a.id}')" class="text-rose-400 p-2 hover:bg-rose-100 rounded-xl transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                </div>
+                            </div>
+                        `).join('') : '<p class="text-center text-slate-400 font-black uppercase text-xs py-10 tracking-widest col-span-2">Belum ada catatan prestasi</p>'}
                     </div>
                 </div>`;
         }
 
         function renderSettings(c) {
             c.innerHTML = `
-                <div class="bg-white p-6 md:p-8 rounded-[2rem] border border-teal-50 shadow-sm max-w-md">
-                    <h3 class="text-base font-black text-tosca mb-6 uppercase">Jam Operasional</h3>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div><label class="text-[9px] font-black text-tosca uppercase">Masuk Mulai</label><input type="time" id="s-ci-s" value="${state.settings.check_in_start}" class="w-full p-4 bg-teal-50 rounded-xl"></div>
-                        <div><label class="text-[9px] font-black text-tosca uppercase">Masuk Akhir</label><input type="time" id="s-ci-e" value="${state.settings.check_in_end}" class="w-full p-4 bg-teal-50 rounded-xl"></div>
+                <div class="bg-white p-10 rounded-5xl shadow-xl max-w-2xl mx-auto">
+                    <h3 class="text-xl font-black uppercase text-slate-800 mb-10 text-center tracking-tighter">Pengaturan Absensi</h3>
+                    <div class="space-y-8">
+                        <div class="grid grid-cols-2 gap-6">
+                            <div>
+                                <label class="text-[10px] font-black text-tosca uppercase mb-3 block">Jam Masuk (Mulai)</label>
+                                <input type="time" id="s-in-s" value="${state.settings.check_in_start}" class="w-full p-4 bg-slate-50 rounded-2xl font-black outline-none">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-black text-tosca uppercase mb-3 block">Jam Masuk (Selesai)</label>
+                                <input type="time" id="s-in-e" value="${state.settings.check_in_end}" class="w-full p-4 bg-slate-50 rounded-2xl font-black outline-none">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-6">
+                            <div>
+                                <label class="text-[10px] font-black text-gold uppercase mb-3 block">Jam Pulang (Mulai)</label>
+                                <input type="time" id="s-out-s" value="${state.settings.check_out_start}" class="w-full p-4 bg-slate-50 rounded-2xl font-black outline-none">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-black text-gold uppercase mb-3 block">Jam Pulang (Selesai)</label>
+                                <input type="time" id="s-out-e" value="${state.settings.check_out_end}" class="w-full p-4 bg-slate-50 rounded-2xl font-black outline-none">
+                            </div>
+                        </div>
+                        <button onclick="window.updateSettings()" class="w-full py-6 tosca-gradient text-white rounded-3xl font-black uppercase shadow-xl">Simpan Pengaturan</button>
                     </div>
-                    <button onclick="window.updateSettings()" class="w-full tosca-gradient text-white py-4 rounded-xl font-black uppercase mt-6">Update Pengaturan</button>
                 </div>`;
         }
 
-        window.notify = (msg, type = 'success') => {
-            const container = document.getElementById('notification-container');
-            const el = document.createElement('div');
-            el.className = `p-4 rounded-xl shadow-2xl flex items-center gap-3 text-[10px] font-black uppercase text-white transition-all ${type === 'success' ? 'tosca-gradient' : 'bg-rose-500'}`;
-            el.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle' : 'alert-circle'}" class="w-4 h-4"></i> ${msg}`;
-            container.appendChild(el); lucide.createIcons();
-            setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 500); }, 3000);
+        // --- ATTENDANCE ACTIONS ---
+        window.markAttendance = async (sid, status, notes = null) => {
+            const today = new Date().toISOString().split('T')[0];
+            const existing = state.attendance.find(a => a.student_id === sid);
+            const payload = { student_id: sid, date: today, status: status || existing?.status || 'Hadir' };
+            if (notes !== null) payload.notes = notes;
+            const now = new Date().toISOString();
+            if (state.manualMode === 'check_in') payload.check_in = existing?.check_in || now;
+            else payload.check_out = existing?.check_out || now;
+            const { error } = await supabaseClient.from('attendance').upsert(payload, { onConflict: 'student_id,date' });
+            if (!error) { await window.fetchData(); window.notify("Tersimpan"); }
         };
 
-        function updateStatus(s) {
-            const dot = document.getElementById('status-dot');
-            const txt = document.getElementById('status-text');
-            dot.className = `w-2.5 h-2.5 rounded-full ${s === 'online' ? 'bg-tosca' : 'bg-rose-500'} animate-pulse`;
-            txt.innerText = s === 'online' ? 'DATABASE ONLINE' : 'KONEKSI TERPUTUS';
-        }
+        window.toggleScanner = async () => {
+            const btn = document.getElementById('scan-btn');
+            if (state.scanner && state.scanner.getState() === 2) { 
+                await state.scanner.stop(); 
+                state.scanner = null; 
+                btn.innerText = "Aktifkan Kamera"; 
+                return; 
+            }
+            state.scanner = new Html5Qrcode("reader");
+            try {
+                await state.scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (txt) => {
+                    const s = state.students.find(x => x.nisn === txt);
+                    if (s) { 
+                        window.markAttendance(s.id, 'Hadir'); 
+                        window.notify(`QR Terbaca: ${s.name}`); 
+                        // Play Beep? (Optional)
+                    }
+                });
+                btn.innerText = "Matikan Kamera";
+            } catch (err) { 
+                window.notify("Izin Kamera Ditolak", "error"); 
+            }
+        };
 
-        window.closeModal = () => document.getElementById('edit-modal').classList.add('hidden');
+        window.sendWA = (name, phone, status, notes) => {
+            if (!phone || phone === "null" || phone === "undefined") return window.notify("No WA Belum Diisi", "error");
+            const session = state.manualMode === 'check_in' ? 'MASUK' : 'PULANG';
+            const msg = `*LAPORAN ABSENSI SISWA*\n\nAnanda: *${name}*\nStatus: *${status.toUpperCase()}* (${session})\nTanggal: ${new Intl.DateTimeFormat('id-ID', { dateStyle: 'full' }).format(new Date())}\n${notes ? '_Catatan: ' + notes + '_' : ''}\n\nTerima kasih.`;
+            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+        };
+
+        // Initialize
         document.addEventListener('DOMContentLoaded', window.fetchData);
+        window.state = state;
+
     </script>
 </body>
 </html>
