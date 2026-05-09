@@ -437,13 +437,27 @@
 
         function renderDashboard(c) {
             const hadir = state.attendance.filter(a => a.status === 'Hadir').length;
+            const sakit = state.attendance.filter(a => a.status === 'Sakit').length;
+            const izin = state.attendance.filter(a => a.status === 'Izin').length;
+            const alpa = state.attendance.filter(a => a.status === 'Alpa').length;
+
             c.innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+                <!-- Statistik Utama -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
                     ${statCard('Siswa', state.students.length, 'users', 'tosca')}
-                    ${statCard('Hadir', hadir, 'check-circle', 'gold')}
+                    ${statCard('Hadir', hadir, 'check-circle', 'tosca')}
                     ${statCard('Jurnal', state.journals.length, 'book-open', 'tosca')}
-                    ${statCard('Prestasi', state.achievements.length, 'award', 'gold')}
+                    ${statCard('Prestasi', state.achievements.length, 'award', 'tosca')}
                 </div>
+
+                <!-- Statistik Ketidakhadiran -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                    ${statCard('Sakit (Hari Ini)', sakit, 'thermometer', 'gold')}
+                    ${statCard('Izin (Hari Ini)', izin, 'clipboard-edit', 'gold')}
+                    ${statCard('Alpa (Hari Ini)', alpa, 'user-x', 'gold')}
+                </div>
+
+                <!-- Banner Portal -->
                 <div class="tosca-gradient p-12 rounded-5xl shadow-2xl relative overflow-hidden text-white group">
                     <div class="relative z-10">
                         <h3 class="text-4xl font-black mb-4 tracking-tighter uppercase">Portal Absensi <br/><span class="text-gold-light">Online Siswa</span></h3>
