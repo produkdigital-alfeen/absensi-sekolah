@@ -264,23 +264,63 @@
             }
         };
 
-        // --- STREAMING_CHUNK:Recap Logic... ---
+        window.handleExcelImport = async (e) => {
+            const file = e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = async (evt) => {
+                const data = evt.target.result;
+                const workbook = XLSX.read(data, { type: 'binary' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(sheet);
+                
+                window.notify(`Memproses ${rows.length} data siswa...`);
+                for (let row of rows) {
+                    const cl = state.classes.find(c => c.name.toLowerCase() === (row.class_name || "").toLowerCase());
+                    if (cl) {
+                        await supabaseClient.from('students').insert([{
+                            name: row.name, nisn: String(row.nisn), class_id: cl.id, parent_phone: String(row.parent_phone || "")
+                        }]);
+                    }
+                }
+                window.notify("Import Selesai");
+                await window.fetchData();
+            };
+            reader.readAsBinaryString(file);
+        };
+
+        window.downloadQR = (nisn, name) => {
+            const container = document.getElementById('qr-hidden-container');
+            container.innerHTML = '';
+            new QRCode(container, { text: nisn, width: 300, height: 300 });
+            setTimeout(() => {
+                const img = container.querySelector('img');
+                if (img) {
+                    const link = document.createElement('a');
+                    link.download = `QR_${name.replace(/\s+/g, '_')}.png`;
+                    link.href = img.src;
+                    link.click();
+                    window.notify("QR Code siap diunduh");
+                }
+            }, 500);
+        };
+
+        // --- RECAP LOGIC ---
         window.getClassRecap = (classId) => {
             const classStudents = state.students.filter(s => s.class_id === classId);
-            const studentIds = classStudents.map(s => s.id);
-            const attToday = state.attendance.filter(a => studentIds.includes(a.student_id));
+            const total = classStudents.length;
+            const classAtt = state.attendance.filter(a => classStudents.some(s => s.id === a.student_id));
             
             return {
-                total: classStudents.length,
-                hadir: attToday.filter(a => a.status === 'Hadir').length,
-                sakit: attToday.filter(a => a.status === 'Sakit').length,
-                izin: attToday.filter(a => a.status === 'Izin').length,
-                alpa: attToday.filter(a => a.status === 'Alpa').length,
-                belum: classStudents.length - attToday.length
+                total,
+                hadir: classAtt.filter(a => a.status === 'Hadir').length,
+                sakit: classAtt.filter(a => a.status === 'Sakit').length,
+                izin: classAtt.filter(a => a.status === 'Izin').length,
+                alpa: classAtt.filter(a => a.status === 'Alpa').length
             };
         };
 
-        // --- STREAMING_CHUNK:Renderers... ---
+        // --- RENDERERS ---
         function render() {
             const nav = document.getElementById('nav-links');
             nav.innerHTML = pages.map(p => `
