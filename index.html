@@ -292,7 +292,12 @@
         window.downloadQR = (nisn, name) => {
             const container = document.getElementById('qr-hidden-container');
             container.innerHTML = '';
-            new QRCode(container, { text: nisn, width: 300, height: 300 });
+            new QRCode(container, { 
+                text: String(nisn).trim(), 
+                width: 512, 
+                height: 512,
+                correctLevel: QRCode.CorrectLevel.H 
+            });
             setTimeout(() => {
                 const img = container.querySelector('img');
                 if (img) {
@@ -300,7 +305,7 @@
                     link.download = `QR_${name.replace(/\s+/g, '_')}.png`;
                     link.href = img.src;
                     link.click();
-                    window.notify("QR Code siap diunduh");
+                    window.notify("QR Code kualitas tinggi siap");
                 }
             }, 500);
         };
@@ -758,24 +763,55 @@
 
         window.toggleScanner = async () => {
             const btn = document.getElementById('scan-btn');
+            const readerEl = document.getElementById('reader');
+
             if (state.scanner && state.scanner.getState() === 2) { 
                 await state.scanner.stop(); 
                 state.scanner = null; 
-                btn.innerText = "Aktifkan Kamera"; 
+                btn.innerText = "Aktifkan Kamera";
+                readerEl.classList.remove('border-tosca');
                 return; 
             }
+
             state.scanner = new Html5Qrcode("reader");
+            
+            const config = { 
+                fps: 20, // Meningkatkan frame per second agar lebih halus
+                qrbox: (viewPortWidth, viewPortHeight) => {
+                    const size = Math.min(viewPortWidth, viewPortHeight) * 0.7;
+                    return { width: size, height: size };
+                },
+                aspectRatio: 1.0
+            };
+
             try {
-                await state.scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (txt) => {
-                    const s = state.students.find(x => x.nisn === txt);
-                    if (s) { 
-                        window.markAttendance(s.id, 'Hadir'); 
-                        window.notify(`QR Terbaca: ${s.name}`); 
+                await state.scanner.start(
+                    { facingMode: "environment" }, 
+                    config, 
+                    (txt) => {
+                        const cleanTxt = String(txt).trim();
+                        const s = state.students.find(x => String(x.nisn).trim() === cleanTxt);
+                        
+                        if (s) { 
+                            // Memberikan feedback visual saat berhasil scan
+                            readerEl.classList.add('ring-8', 'ring-emerald-400', 'transition-all');
+                            setTimeout(() => readerEl.classList.remove('ring-8', 'ring-emerald-400'), 500);
+                            
+                            window.markAttendance(s.id, 'Hadir'); 
+                            window.notify(`Berhasil Absen: ${s.name}`);
+                            
+                            // Getar jika perangkat mendukung
+                            if (navigator.vibrate) navigator.vibrate(100);
+                        } else {
+                            window.notify("Siswa tidak terdaftar: " + cleanTxt, "error");
+                        }
                     }
-                });
+                );
                 btn.innerText = "Matikan Kamera";
+                readerEl.classList.add('border-tosca');
             } catch (err) { 
-                window.notify("Izin Kamera Ditolak", "error"); 
+                console.error(err);
+                window.notify("Kamera gagal diakses. Pastikan izin diberikan.", "error"); 
             }
         };
 
