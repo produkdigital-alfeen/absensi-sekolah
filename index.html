@@ -46,10 +46,11 @@
             <div class="p-8 border-b border-white/10 text-center">
                 <div class="p-2 bg-white rounded-5xl shadow-xl border-4 border-gold inline-block mb-4">
                     <img id="school-logo" src="https://jmtyhlpnzposejasobcv.supabase.co/storage/v1/object/public/logo/logo%20alqom%20baru.png" 
-                         alt="Logo" class="w-20 h-20 object-contain" onerror="this.src='https://placehold.co/200x200/0d9488/ffffff?text=MA+ALQ'">
+                         alt="Logo" class="w-20 h-20 object-contain" onerror="this.src='logo.png'">
                 </div>
-                <h1 class="text-lg font-black leading-tight tracking-tighter uppercase">Absensi Siswa Online</h1>
-                <h1 class="text-lg font-black text-gold-light leading-tight tracking-tighter uppercase">MA AL QOMARIYAH</h1>
+                <h1 class="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 leading-none mb-1">MA Al Qomariyah</h1>
+                <h1 class="text-lg font-black leading-tight uppercase">Absensi Siswa</h1>
+                <h1 class="text-lg font-black text-gold-light leading-tight uppercase">Online</h1>
             </div>
             <nav class="flex-1 p-6 space-y-2 overflow-y-auto custom-scroll" id="nav-links"></nav>
             <div class="p-6 border-t border-white/10">
@@ -69,13 +70,12 @@
                         <p class="text-xs font-bold text-slate-400" id="current-date-display"></p>
                     </div>
                 </div>
-                <button onclick="window.fetchData()" class="p-3 bg-teal-50 text-tosca rounded-2xl hover:bg-teal-100 transition-all active:scale-90"><i data-lucide="refresh-cw" class="w-4 h-4"></i></button>
+                <button onclick="window.fetchData()" class="p-3 bg-teal-50 text-tosca rounded-2xl hover:bg-teal-100 active:scale-90 transition-all shadow-sm"><i data-lucide="refresh-cw" class="w-4 h-4"></i></button>
             </header>
             <div id="content" class="flex-1 overflow-y-auto p-4 md:p-10 custom-scroll"></div>
         </main>
     </div>
 
-    <!-- Modal Container -->
     <div id="modal" class="fixed inset-0 z-[100] modal-overlay hidden flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-xl rounded-5xl shadow-2xl overflow-hidden border border-teal-50">
             <div class="p-8 tosca-gradient text-white flex justify-between items-center">
@@ -95,23 +95,21 @@
         const SUPABASE_ANON_KEY = 'sb_publishable_OSleH0Z2_JjVnRx92O6c_Q_s19_ZGdL';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        const JABATAN = ["Guru", "Tendik", "Kepala Madrasah", "Wakamad Kesiswaan", "Wakamad Kurikulum", "Administrasi", "Lainnya"];
+        const MAPEL = ["Aqidah Akhlaq", "Qur'an Hadits", "Bahasa Arab", "Bahasa Inggris", "Bahasa Indonesia", "Bahasa Sunda", "Matematika", "Kimia", "TIK", "Sejarah Umum", "Sejarah Kebudayaan Islam (SKI)", "Ekonomi & Akuntansi", "Biologi", "Sosiologi", "Penjasorkes", "Seni Budaya", "Lainnya"];
+
         const state = {
-            currentPage: 'dashboard', classes: [], students: [], attendance: [],
+            currentPage: 'dashboard', classes: [], students: [], teachers: [], attendance: [],
             journals: [], achievements: [], isLoading: true, isMenuOpen: false,
             absensiType: 'manual', manualMode: 'check_in', selectedClass: '', scanner: null,
             settings: { check_in_start: '06:00', check_in_end: '08:00', check_out_start: '14:00', check_out_end: '17:00' }
         };
 
-        // EXPOSE STATE AND HELPERS GLOBALLY TO FIX THE TYPEERROR
-        window.state = state;
-        window.setAbsensiType = (type) => { state.absensiType = type; window.fetchData(); };
-        window.setManualMode = (mode) => { state.manualMode = mode; window.fetchData(); };
-        window.setSelectedClass = (val) => { state.selectedClass = val; window.fetchData(); };
-
         const pages = [
             { id: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard' },
             { id: 'classes', label: 'Data Kelas', icon: 'layers' },
-            { id: 'students', label: 'Data Siswa', icon: 'users' },
+            { id: 'teachers', label: 'Data Guru MA', icon: 'user-cog' },
+            { id: 'students', label: 'Siswa', icon: 'users' },
             { id: 'attendance', label: 'Absensi', icon: 'user-check' },
             { id: 'journals', label: 'Jurnal Guru', icon: 'book-open' },
             { id: 'achievements', label: 'Prestasi', icon: 'award' },
@@ -122,11 +120,8 @@
             setInterval(() => {
                 const clockEl = document.getElementById('digital-clock');
                 const dateEl = document.getElementById('digital-date');
-                if (clockEl || dateEl) {
-                    const now = new Date();
-                    if (clockEl) clockEl.innerText = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-                    if (dateEl) dateEl.innerText = new Intl.DateTimeFormat('id-ID', { dateStyle: 'full' }).format(now);
-                }
+                if (clockEl) clockEl.innerText = new Date().toLocaleTimeString('id-ID', { hour12: false });
+                if (dateEl) dateEl.innerText = new Intl.DateTimeFormat('id-ID', { dateStyle: 'full' }).format(new Date());
             }, 1000);
         };
 
@@ -134,9 +129,10 @@
             state.isLoading = true; render();
             try {
                 const today = new Date().toISOString().split('T')[0];
-                const [cl, st, att, jr, ach, sett] = await Promise.all([
+                const [cl, st, tc, att, jr, ach, sett] = await Promise.all([
                     supabaseClient.from('classes').select('*').order('name'),
                     supabaseClient.from('students').select('*, classes(name)').order('name'),
+                    supabaseClient.from('teachers').select('*').order('name'),
                     supabaseClient.from('attendance').select('*').eq('date', today),
                     supabaseClient.from('journals').select('*, classes(name)').order('created_at', { ascending: false }),
                     supabaseClient.from('achievements').select('*, students(name)').order('created_at', { ascending: false }),
@@ -144,14 +140,17 @@
                 ]);
                 state.classes = cl.data || [];
                 state.students = st.data || [];
+                state.teachers = tc.data || [];
                 state.attendance = att.data || [];
                 state.journals = jr.data || [];
                 state.achievements = ach.data || [];
                 if (sett.data) sett.data.forEach(s => state.settings[s.key] = s.value);
-                document.getElementById('status-dot').className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse';
-                document.getElementById('status-text').innerText = 'Online';
-            } catch (e) {
-                window.notify("Koneksi Gagal", "error");
+                
+                const dot = document.getElementById('status-dot');
+                if(dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse';
+                const txt = document.getElementById('status-text');
+                if(txt) txt.innerText = 'Online';
+            } catch (e) { console.error(e); window.notify("Koneksi Gagal", "error");
             } finally { state.isLoading = false; render(); }
         };
 
@@ -182,11 +181,48 @@
             lucide.createIcons();
         };
 
+        window.toggleScanner = async () => {
+            const btn = document.getElementById('scan-btn');
+            if (state.scanner && state.scanner.getState() === 2) { 
+                await state.scanner.stop(); 
+                state.scanner = null; 
+                btn.innerText = "Aktifkan Kamera"; 
+                return; 
+            }
+            state.scanner = new Html5Qrcode("reader");
+            try {
+                await state.scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (txt) => {
+                    const s = state.students.find(x => x.nisn === txt);
+                    if (s) { 
+                        window.markAttendance(s.id, 'Hadir'); 
+                        window.notify(`Scan Berhasil: ${s.name}`); 
+                    } else {
+                        window.notify("Data Siswa Tidak Dikenali", "error");
+                    }
+                });
+                btn.innerText = "Matikan Kamera";
+            } catch (err) { window.notify("Izin Kamera Ditolak", "error"); }
+        };
+
+        window.setAbsensiType = (v) => { state.absensiType = v; render(); };
+        window.setManualMode = (v) => { state.manualMode = v; render(); };
+        window.setSelectedClass = (v) => { state.selectedClass = v; render(); };
+
         window.saveClass = async () => {
             const n = document.getElementById('m-cl-name').value.trim();
             if(!n) return;
             const { error } = await supabaseClient.from('classes').insert([{ name: n }]);
             if (!error) { window.notify("Kelas Disimpan"); window.closeModal(); await window.fetchData(); }
+        };
+
+        window.saveTeacher = async () => {
+            const payload = { 
+                name: document.getElementById('t-name').value, 
+                position: document.getElementById('t-pos').value,
+                subject: document.getElementById('t-mapel').value
+            };
+            const { error } = await supabaseClient.from('teachers').insert([payload]);
+            if (!error) { window.notify("Guru Berhasil Ditambah"); window.closeModal(); await window.fetchData(); }
         };
 
         window.saveStudent = async () => {
@@ -209,12 +245,6 @@
             if (!error) { window.notify("Data Diperbarui"); window.closeModal(); await window.fetchData(); }
         };
 
-        window.deleteData = async (table, id) => {
-            if (!confirm("Hapus data ini secara permanen?")) return;
-            const { error } = await supabaseClient.from(table).delete().eq('id', id);
-            if (!error) { window.notify("Data Dihapus"); await window.fetchData(); }
-        };
-
         window.saveJournal = async () => {
             const payload = {
                 teacher_name: document.getElementById('j-teacher').value, subject: document.getElementById('j-subject').value,
@@ -223,7 +253,7 @@
                 activity: document.getElementById('j-activity').value, absent_notes: document.getElementById('j-absent').value
             };
             const { error } = await supabaseClient.from('journals').insert([payload]);
-            if (!error) { window.notify("Jurnal Disimpan"); window.closeModal(); await window.fetchData(); }
+            if (!error) { window.notify("Jurnal Berhasil Disimpan"); window.closeModal(); await window.fetchData(); }
         };
 
         window.saveAchievement = async () => {
@@ -232,7 +262,24 @@
                 description: document.getElementById('a-desc').value
             };
             const { error } = await supabaseClient.from('achievements').insert([payload]);
-            if (!error) { window.notify("Prestasi Disimpan"); window.closeModal(); await window.fetchData(); }
+            if (!error) { window.notify("Prestasi Berhasil Disimpan"); window.closeModal(); await window.fetchData(); }
+        };
+
+        window.deleteData = async (table, id) => {
+            if (!confirm("Hapus data ini secara permanen?")) return;
+            const { error } = await supabaseClient.from(table).delete().eq('id', id);
+            if (!error) { window.notify("Data Telah Dihapus"); await window.fetchData(); }
+        };
+
+        window.updateSettings = async () => {
+            const sets = [
+                { key: 'check_in_start', value: document.getElementById('s-in-s').value },
+                { key: 'check_in_end', value: document.getElementById('s-in-e').value },
+                { key: 'check_out_start', value: document.getElementById('s-out-s').value },
+                { key: 'check_out_end', value: document.getElementById('s-out-e').value }
+            ];
+            const { error } = await supabaseClient.from('settings').upsert(sets, { onConflict: 'key' });
+            if (!error) window.notify("Pengaturan Diperbarui");
         };
 
         window.markAttendance = async (sid, status, notes = null) => {
@@ -244,27 +291,14 @@
             if (state.manualMode === 'check_in') payload.check_in = existing?.check_in || now;
             else payload.check_out = existing?.check_out || now;
             const { error } = await supabaseClient.from('attendance').upsert(payload, { onConflict: 'student_id,date' });
-            if (!error) { await window.fetchData(); window.notify("Tersimpan"); }
+            if (!error) { await window.fetchData(); window.notify("Absensi Tersimpan"); }
         };
 
         window.sendWA = (name, phone, status, notes) => {
-            if (!phone || phone === "null" || phone === "") return window.notify("No WA Belum Diisi", "error");
+            if (!phone || phone === "null" || phone === "") return window.notify("Nomor WA Orang Tua Kosong", "error");
             const session = state.manualMode === 'check_in' ? 'MASUK' : 'PULANG';
-            const msg = `*LAPORAN ABSENSI SISWA*\n\nAnanda: *${name}*\nStatus: *${status.toUpperCase()}* (${session})\nTanggal: ${new Intl.DateTimeFormat('id-ID', { dateStyle: 'full' }).format(new Date())}\n${notes ? '_Catatan: ' + notes + '_' : ''}\n\nTerima kasih.`;
+            const msg = `*LAPORAN ABSENSI SISWA*\n\nAnanda: *${name}*\nSesi: *${session}*\nStatus: *${status.toUpperCase()}*\nTanggal: ${new Intl.DateTimeFormat('id-ID', { dateStyle: 'full' }).format(new Date())}\n${notes ? '_Catatan: ' + notes + '_' : ''}\n\nTerima kasih.`;
             window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
-        };
-
-        window.toggleScanner = async () => {
-            const btn = document.getElementById('scan-btn');
-            if (state.scanner && state.scanner.getState() === 2) { await state.scanner.stop(); state.scanner = null; btn.innerText = "Aktifkan Kamera"; return; }
-            state.scanner = new Html5Qrcode("reader");
-            try {
-                await state.scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (txt) => {
-                    const s = state.students.find(x => x.nisn === txt);
-                    if (s) { window.markAttendance(s.id, 'Hadir'); window.notify(`Scan Berhasil: ${s.name}`); }
-                });
-                btn.innerText = "Matikan Kamera";
-            } catch (e) { window.notify("Izin Kamera Ditolak", "error"); }
         };
 
         window.downloadQR = (nisn, name) => {
@@ -276,23 +310,269 @@
             }, 500);
         };
 
-        window.handleExcelImport = async (e) => {
-            const file = e.target.files[0]; if(!file) return;
-            const reader = new FileReader();
-            reader.onload = async (evt) => {
-                const data = evt.target.result; const workbook = XLSX.read(data, { type: 'binary' });
-                const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-                window.notify(`Memproses ${rows.length} data...`);
-                for (let row of rows) {
-                    const cl = state.classes.find(c => c.name.toLowerCase() === (row.class_name || "").toLowerCase());
-                    if (cl) await supabaseClient.from('students').insert([{ name: row.name, nisn: String(row.nisn), class_id: cl.id, gender: row.gender, parent_phone: String(row.parent_phone || "") }]);
-                }
-                window.notify("Import Selesai"); await window.fetchData();
-            };
-            reader.readAsBinaryString(file);
+        function render() {
+            const nav = document.getElementById('nav-links');
+            if(nav) {
+                nav.innerHTML = pages.map(p => `
+                    <button onclick="window.navigate('${p.id}')" class="w-full flex items-center gap-5 px-6 py-5 rounded-4xl transition-all text-xs font-black uppercase tracking-widest ${state.currentPage === p.id ? 'sidebar-item-active' : 'text-white/60 hover:bg-white/5'}">
+                        <i data-lucide="${p.icon}" class="w-5 h-5"></i> ${p.label}
+                    </button>
+                `).join('');
+            }
+            
+            const pTitle = document.getElementById('page-title');
+            if(pTitle) pTitle.innerText = pages.find(p => p.id === state.currentPage)?.label || '';
+            const container = document.getElementById('content');
+            if(!container) return;
+            if (state.isLoading) {
+                container.innerHTML = `<div class="h-full flex flex-col items-center justify-center gap-6"><div class="w-16 h-16 border-[6px] border-slate-100 border-t-tosca animate-spin rounded-full"></div><p class="font-black text-tosca text-[11px] uppercase tracking-widest">Memuat...</p></div>`;
+                return;
+            }
+            switch(state.currentPage) {
+                case 'dashboard': renderDashboard(container); break;
+                case 'classes': renderClasses(container); break;
+                case 'teachers': renderTeachers(container); break;
+                case 'students': renderStudents(container); break;
+                case 'attendance': renderAttendance(container); break;
+                case 'journals': renderJournals(container); break;
+                case 'achievements': renderAchievements(container); break;
+                case 'settings': renderSettings(container); break;
+            }
+            lucide.createIcons();
+        }
+
+        function renderDashboard(c) {
+            const h = state.attendance.filter(a => a.status === 'Hadir').length;
+            const s = state.attendance.filter(a => a.status === 'Sakit').length;
+            const i = state.attendance.filter(a => a.status === 'Izin').length;
+            const a = state.attendance.filter(a => a.status === 'Alpa').length;
+            c.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    ${statCard('Total Siswa', state.students.length, 'users', 'tosca')}
+                    ${statCard('Hadir', h, 'check-circle', 'tosca')}
+                    ${statCard('Guru MA', state.teachers.length, 'user-cog', 'tosca')}
+                    ${statCard('Prestasi', state.achievements.length, 'award', 'tosca')}
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    ${statCard('Sakit', s, 'thermometer', 'gold')}
+                    ${statCard('Izin', i, 'clipboard-edit', 'gold')}
+                    ${statCard('Alpa', a, 'user-x', 'gold')}
+                </div>
+                <div class="tosca-gradient p-10 md:p-16 rounded-5xl shadow-2xl relative overflow-hidden text-white flex flex-col md:flex-row justify-between items-center gap-10">
+                    <div class="text-center md:text-left z-10">
+                        <h3 class="text-3xl md:text-5xl font-black mb-4 uppercase tracking-tighter leading-tight">Portal Absensi Online <br/><span class="text-gold-light">MA Al Qomariyah</span></h3>
+                        <button onclick="window.navigate('attendance')" class="px-10 py-5 bg-white text-tosca rounded-2xl font-black uppercase shadow-xl hover:scale-105 transition-all">Mulai Absensi</button>
+                    </div>
+                    <div class="bg-black/20 backdrop-blur-md p-10 rounded-4xl border border-white/10 text-center min-w-[280px] z-10 shadow-inner">
+                        <p id="digital-date" class="text-[10px] font-black uppercase text-gold-light mb-2 tracking-widest"></p>
+                        <div id="digital-clock" class="text-5xl md:text-6xl font-black tracking-tighter text-white">00:00:00</div>
+                    </div>
+                </div>`;
+        }
+
+        function statCard(t, v, i, theme) {
+            return `<div class="bg-white p-6 rounded-4xl border border-slate-100 shadow-sm flex items-center gap-5 border-b-4 ${theme === 'tosca' ? 'border-tosca' : 'border-gold'}">
+                <div class="w-14 h-14 ${theme === 'tosca' ? 'tosca-gradient' : 'gold-gradient'} text-white rounded-3xl flex items-center justify-center shadow-lg"><i data-lucide="${i}" class="w-6 h-6"></i></div>
+                <div><p class="text-[9px] font-black uppercase text-slate-400 tracking-tighter">${t}</p><p class="text-2xl font-black text-slate-800 tracking-tighter">${v}</p></div>
+            </div>`;
+        }
+
+        function renderClasses(c) {
+            c.innerHTML = `<div class="bg-white p-8 rounded-5xl shadow-xl">
+                <div class="flex justify-between items-center mb-8"><h3 class="text-lg font-black text-tosca uppercase tracking-tighter">Data Kelas</h3><button onclick="window.openAddClass()" class="px-6 py-3 tosca-gradient text-white rounded-2xl font-black text-[10px] uppercase shadow-xl">+ Kelas</button></div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    ${state.classes.map(cl => {
+                        const count = state.students.filter(s => s.class_id === cl.id).length;
+                        const L = state.students.filter(s => s.class_id === cl.id && s.gender === 'L').length;
+                        const P = state.students.filter(s => s.class_id === cl.id && s.gender === 'P').length;
+                        const absToday = state.attendance.filter(a => state.students.find(s => s.id === a.student_id && s.class_id === cl.id));
+                        const h = absToday.filter(a => a.status === 'Hadir').length;
+                        const s = absToday.filter(a => a.status === 'Sakit').length;
+                        const i = absToday.filter(a => a.status === 'Izin').length;
+                        const a = absToday.filter(a => a.status === 'Alpa').length;
+
+                        return `<div class="p-6 bg-slate-50 rounded-4xl border border-slate-100 relative group">
+                            <div class="flex justify-between items-start mb-4"><span class="font-black text-xl text-slate-800 uppercase">${cl.name}</span><button onclick="window.deleteData('classes', '${cl.id}')" class="text-rose-400 p-2"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div>
+                            <div class="space-y-4">
+                                <div class="flex justify-between text-[10px] font-bold text-slate-500 uppercase border-b pb-2"><span>Total Siswa</span><span>${count} (${L}L / ${P}P)</span></div>
+                                <div class="grid grid-cols-4 gap-1.5">
+                                    <div class="p-2 bg-emerald-50 rounded-xl text-center border border-emerald-100"><p class="text-[8px] font-black text-emerald-600 uppercase">H</p><p class="text-sm font-black text-emerald-800">${h}</p></div>
+                                    <div class="p-2 bg-amber-50 rounded-xl text-center border border-amber-100"><p class="text-[8px] font-black text-amber-600 uppercase">S</p><p class="text-sm font-black text-amber-800">${s}</p></div>
+                                    <div class="p-2 bg-blue-50 rounded-xl text-center border border-blue-100"><p class="text-[8px] font-black text-blue-600 uppercase">I</p><p class="text-sm font-black text-blue-800">${i}</p></div>
+                                    <div class="p-2 bg-rose-50 rounded-xl text-center border border-rose-100"><p class="text-[8px] font-black text-rose-600 uppercase">A</p><p class="text-sm font-black text-rose-800">${a}</p></div>
+                                </div>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>`;
+        }
+
+        function renderTeachers(c) {
+            c.innerHTML = `<div class="bg-white p-8 rounded-5xl shadow-xl">
+                <div class="flex justify-between items-center mb-8"><h3 class="text-lg font-black text-tosca uppercase tracking-tighter">Data Guru MA</h3><button onclick="window.openAddTeacher()" class="px-6 py-3 tosca-gradient text-white rounded-2xl font-black text-[10px] uppercase shadow-xl">+ Guru</button></div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    ${state.teachers.map(t => `<div class="bg-slate-50 p-5 rounded-4xl flex items-center justify-between border border-slate-100">
+                        <div class="min-w-0"><p class="font-black text-slate-800 truncate text-sm uppercase">${t.name}</p><p class="text-[9px] font-bold text-tosca uppercase">${t.position} • ${t.subject}</p></div>
+                        <button onclick="window.deleteData('teachers', '${t.id}')" class="p-2 bg-white text-rose-400 rounded-xl shadow-sm"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </div>`).join('')}
+                </div>
+            </div>`;
+        }
+
+        function renderStudents(c) {
+            c.innerHTML = `<div class="bg-white p-8 rounded-5xl shadow-xl">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4"><h3 class="text-lg font-black text-tosca uppercase tracking-tighter">Data Siswa</h3>
+                <div class="flex gap-2">
+                    <button onclick="document.getElementById('excel-input').click()" class="px-5 py-3 bg-slate-100 text-slate-600 rounded-2xl font-black text-[10px] uppercase">Import Excel</button>
+                    <button onclick="window.openAddStudent()" class="px-6 py-3 tosca-gradient text-white rounded-2xl font-black text-[10px] uppercase shadow-xl">+ Siswa</button>
+                </div></div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    ${state.students.map(s => `<div class="bg-slate-50 p-5 rounded-4xl flex items-center justify-between border border-slate-100">
+                        <div class="min-w-0"><p class="font-black text-slate-800 truncate text-sm uppercase">${s.name}</p><p class="text-[9px] font-bold text-tosca uppercase">${s.classes?.name || '-'} • ${s.nisn} (${s.gender})</p></div>
+                        <div class="flex gap-1">
+                            <button onclick="window.downloadQR('${s.nisn}', '${s.name}')" title="Download QR" class="p-2 bg-white text-tosca rounded-xl shadow-sm hover:gold-gradient hover:text-white transition-all"><i data-lucide="qr-code" class="w-3.5 h-3.5"></i></button>
+                            <button onclick="window.openEditStudent('${s.id}')" class="p-2 bg-white text-gold rounded-xl shadow-sm"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
+                            <button onclick="window.deleteData('students', '${s.id}')" class="p-2 bg-white text-rose-400 rounded-xl shadow-sm"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                        </div>
+                    </div>`).join('')}
+                </div>
+            </div>`;
+        }
+
+        function renderAttendance(c) {
+            c.innerHTML = `<div class="space-y-8">
+                <div class="flex bg-white p-2 rounded-5xl shadow-xl border border-slate-100 w-full max-w-sm mx-auto">
+                    <button onclick="window.setAbsensiType('manual')" class="flex-1 py-4 rounded-4xl text-xs font-black uppercase ${state.absensiType === 'manual' ? 'tosca-gradient text-white' : 'text-slate-400'}">Manual</button>
+                    <button onclick="window.setAbsensiType('qr')" class="flex-1 py-4 rounded-4xl text-xs font-black uppercase ${state.absensiType === 'qr' ? 'tosca-gradient text-white' : 'text-slate-400'}">Scan QR</button>
+                </div>
+                ${state.absensiType === 'manual' ? renderManualSection() : renderQRSection()}
+            </div>`;
+        }
+
+        function renderManualSection() {
+            const filtered = state.students.filter(s => (state.selectedClass === '' || s.class_id === state.selectedClass));
+            return `<div class="tosca-gradient p-8 rounded-5xl shadow-2xl overflow-x-auto border-4 border-white/10">
+                <div class="flex flex-col md:flex-row gap-6 mb-10 items-end min-w-[500px]">
+                    <div class="flex-1">
+                        <label class="text-[10px] font-black text-gold-light uppercase mb-3 block">Sesi</label>
+                        <div class="flex bg-white/10 p-1.5 rounded-2xl">
+                            <button onclick="window.setManualMode('check_in')" class="flex-1 py-3 text-[10px] font-black rounded-xl ${state.manualMode === 'check_in' ? 'bg-white text-tosca shadow-xl' : 'text-white/40'} uppercase">Masuk</button>
+                            <button onclick="window.setManualMode('check_out')" class="flex-1 py-3 text-[10px] font-black rounded-xl ${state.manualMode === 'check_out' ? 'bg-white text-tosca shadow-xl' : 'text-white/40'} uppercase">Pulang</button>
+                        </div>
+                    </div>
+                    <div class="flex-1">
+                        <label class="text-[10px] font-black text-gold-light uppercase mb-3 block">Filter Kelas</label>
+                        <select onchange="window.setSelectedClass(this.value)" class="w-full p-4 bg-white/10 text-white rounded-2xl font-bold outline-none">
+                            <option value="" class="text-slate-800">Semua Kelas</option>
+                            ${state.classes.map(cl => `<option value="${cl.id}" class="text-slate-800" ${state.selectedClass === cl.id ? 'selected' : ''}>${cl.name}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+                <table class="w-full min-w-[600px] text-white">
+                    <thead class="text-left text-[9px] font-black text-white/30 uppercase tracking-[0.2em] border-b border-white/10">
+                        <tr><th class="pb-6">Nama Siswa</th><th class="pb-6 text-center">Status</th><th class="pb-6">Keterangan</th><th class="pb-6 text-right">WA</th></tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5">
+                        ${filtered.map(s => {
+                            const att = state.attendance.find(a => a.student_id === s.id);
+                            return `<tr>
+                                <td class="py-5"><p class="font-black text-sm uppercase">${s.name}</p><p class="text-[8px] font-bold text-gold-light uppercase">${s.nisn}</p></td>
+                                <td class="py-5 text-center">
+                                    <select onchange="window.markAttendance('${s.id}', this.value)" class="p-2 bg-white/5 border border-white/10 rounded-xl text-[9px] font-black uppercase text-gold-light">
+                                        <option value="Hadir" class="text-slate-800" ${att?.status === 'Hadir' ? 'selected' : ''}>Hadir</option>
+                                        <option value="Sakit" class="text-slate-800" ${att?.status === 'Sakit' ? 'selected' : ''}>Sakit</option>
+                                        <option value="Izin" class="text-slate-800" ${att?.status === 'Izin' ? 'selected' : ''}>Izin</option>
+                                        <option value="Alpa" class="text-slate-800" ${att?.status === 'Alpa' ? 'selected' : ''}>Alpa</option>
+                                    </select>
+                                </td>
+                                <td class="py-5"><input placeholder="Catatan..." value="${att?.notes || ''}" onblur="window.markAttendance('${s.id}', null, this.value)" class="w-full p-3 bg-white rounded-xl text-[10px] font-bold text-slate-900 outline-none border border-white/10"></td>
+                                <td class="py-5 text-right"><button onclick="window.sendWA('${s.name}', '${s.parent_phone}', '${att?.status || 'Hadir'}', '${att?.notes || ''}')" class="p-3 gold-gradient text-white rounded-2xl shadow-lg active:scale-90"><i data-lucide="message-circle" class="w-4 h-4"></i></button></td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>`;
+        }
+
+        function renderQRSection() {
+            return `<div class="bg-white p-12 rounded-5xl border border-slate-100 shadow-2xl text-center max-w-sm mx-auto">
+                <div id="reader" class="mx-auto w-full aspect-square mb-8 rounded-4xl overflow-hidden border-4 border-slate-50 flex items-center justify-center bg-slate-50"><i data-lucide="scan" class="w-16 h-16 text-tosca/10"></i></div>
+                <button id="scan-btn" onclick="window.toggleScanner()" class="w-full py-5 tosca-gradient text-white rounded-2xl font-black uppercase shadow-xl tracking-widest">Aktifkan Kamera</button>
+            </div>`;
+        }
+
+        function renderJournals(c) {
+            c.innerHTML = `<div class="bg-white p-8 rounded-5xl shadow-xl">
+                <div class="flex justify-between items-center mb-8"><h3 class="text-lg font-black text-tosca uppercase tracking-tighter">Jurnal Guru</h3><button onclick="window.openAddJournal()" class="px-6 py-3 tosca-gradient text-white rounded-2xl font-black text-[10px] uppercase shadow-xl">+ Jurnal</button></div>
+                <div class="space-y-4">
+                    ${state.journals.map(j => `<div class="p-6 bg-slate-50 rounded-4xl border border-slate-100 flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-2"><span class="px-3 py-1 bg-tosca text-white text-[8px] font-black rounded-lg uppercase">${new Date(j.date).toLocaleDateString('id-ID')}</span><span class="px-3 py-1 bg-gold text-white text-[8px] font-black rounded-lg uppercase">#${j.meeting_number}</span></div>
+                            <h4 class="font-black text-slate-800 uppercase text-sm">${j.subject}: ${j.topic}</h4>
+                            <p class="text-[9px] font-bold text-tosca uppercase mb-4">${j.teacher_name} • ${j.classes?.name}</p>
+                            <div class="bg-white p-4 rounded-2xl border border-slate-100"><p class="text-xs text-slate-500 leading-relaxed">${j.activity}</p></div>
+                            ${j.absent_notes ? `<div class="mt-3 p-3 bg-rose-50 rounded-xl border border-rose-100"><p class="text-[8px] font-black text-rose-500 uppercase mb-1">Catatan Absen:</p><p class="text-[10px] text-rose-700 font-bold italic">"${j.absent_notes}"</p></div>` : ''}
+                        </div>
+                        <button onclick="window.deleteData('journals', '${j.id}')" class="text-rose-400 p-2"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </div>`).join('')}
+                </div>
+            </div>`;
+        }
+
+        function renderAchievements(c) {
+            c.innerHTML = `<div class="bg-white p-8 rounded-5xl shadow-xl border border-slate-100">
+                <div class="flex justify-between items-center mb-8"><h3 class="text-lg font-black text-gold uppercase tracking-tighter">Prestasi Siswa</h3><button onclick="window.openAddAchievement()" class="px-6 py-3 gold-gradient text-white rounded-2xl font-black text-[10px] uppercase shadow-xl">+ Prestasi</button></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    ${state.achievements.map(a => `<div class="p-6 bg-amber-50 rounded-4xl border border-amber-100 relative overflow-hidden">
+                        <i data-lucide="award" class="absolute -right-5 -bottom-5 w-24 h-24 text-amber-200/50"></i>
+                        <div class="relative z-10 flex justify-between w-full">
+                            <div><p class="font-black text-amber-900 text-sm uppercase">${a.title}</p><p class="text-[9px] font-bold uppercase text-amber-600/70 mb-4">${a.students?.name}</p><p class="text-xs text-amber-800/60 leading-relaxed">${a.description}</p></div>
+                            <button onclick="window.deleteData('achievements', '${a.id}')" class="text-rose-400 p-2"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </div>
+                    </div>`).join('')}
+                </div>
+            </div>`;
+        }
+
+        function renderSettings(c) {
+            c.innerHTML = `<div class="bg-white p-8 rounded-5xl shadow-xl border border-slate-100 max-w-xl mx-auto">
+                <h3 class="text-lg font-black uppercase text-slate-800 mb-8 text-center tracking-widest">Pengaturan Jam</h3>
+                <div class="space-y-6">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="text-[9px] font-black text-tosca uppercase mb-2 block">Masuk Mulai</label><input type="time" id="s-in-s" value="${state.settings.check_in_start}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border"></div>
+                        <div><label class="text-[9px] font-black text-tosca uppercase mb-2 block">Masuk Selesai</label><input type="time" id="s-in-e" value="${state.settings.check_in_end}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="text-[9px] font-black text-gold uppercase mb-2 block">Pulang Mulai</label><input type="time" id="s-out-s" value="${state.settings.check_out_start}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border"></div>
+                        <div><label class="text-[9px] font-black text-gold uppercase mb-2 block">Pulang Selesai</label><input type="time" id="s-out-e" value="${state.settings.check_out_end}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border"></div>
+                    </div>
+                    <button onclick="window.updateSettings()" class="w-full py-5 tosca-gradient text-white rounded-3xl font-black uppercase shadow-xl mt-4">Simpan Pengaturan</button>
+                </div>
+            </div>`;
+        }
+
+        window.openAddClass = () => {
+            const b = document.getElementById('modal-body'); document.getElementById('modal-title').innerText = "Tambah Kelas";
+            b.innerHTML = `<div class="space-y-6"><input type="text" id="m-cl-name" placeholder="Nama Kelas" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none"><button onclick="window.saveClass()" class="w-full py-6 tosca-gradient text-white rounded-3xl font-black uppercase shadow-xl">Simpan</button></div>`;
+            document.getElementById('modal').classList.remove('hidden'); lucide.createIcons();
         };
 
-        // --- STREAMING_CHUNK: Merender konten modal dan halaman dinamis... ---
+        window.openAddTeacher = () => {
+            const b = document.getElementById('modal-body'); document.getElementById('modal-title').innerText = "Tambah Guru MA";
+            b.innerHTML = `<div class="space-y-4">
+                <input type="text" id="t-name" placeholder="Nama Lengkap Guru" class="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border">
+                <select id="t-pos" class="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border">
+                    ${JABATAN.map(j => `<option value="${j}">${j}</option>`).join('')}
+                </select>
+                <select id="t-mapel" class="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border">
+                    ${MAPEL.map(m => `<option value="${m}">${m}</option>`).join('')}
+                </select>
+                <button onclick="window.saveTeacher()" class="w-full py-5 tosca-gradient text-white rounded-3xl font-black uppercase shadow-xl mt-4">Simpan Guru</button>
+            </div>`;
+            document.getElementById('modal').classList.remove('hidden'); lucide.createIcons();
+        };
+
         window.openAddStudent = () => {
             const b = document.getElementById('modal-body'); document.getElementById('modal-title').innerText = "Tambah Siswa";
             b.innerHTML = `<div class="space-y-4">
@@ -333,27 +613,24 @@
             document.getElementById('modal').classList.remove('hidden'); lucide.createIcons();
         };
 
-        window.openAddClass = () => {
-            const b = document.getElementById('modal-body'); document.getElementById('modal-title').innerText = "Tambah Kelas";
-            b.innerHTML = `<div class="space-y-6"><input type="text" id="m-cl-name" placeholder="Nama Kelas" class="w-full p-6 bg-slate-50 rounded-3xl font-black outline-none"><button onclick="window.saveClass()" class="w-full py-6 tosca-gradient text-white rounded-3xl font-black uppercase shadow-xl">Simpan</button></div>`;
-            document.getElementById('modal').classList.remove('hidden'); lucide.createIcons();
-        };
-
         window.openAddJournal = () => {
-            const b = document.getElementById('modal-body'); document.getElementById('modal-title').innerText = "Catat Jurnal";
+            const b = document.getElementById('modal-body'); document.getElementById('modal-title').innerText = "Jurnal Guru";
             b.innerHTML = `<div class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
-                    <input type="date" id="j-date" value="${new Date().toISOString().split('T')[0]}" class="p-4 bg-slate-50 rounded-2xl font-bold outline-none border">
-                    <input type="number" id="j-meeting" placeholder="Pertemuan" class="p-4 bg-slate-50 rounded-2xl font-bold outline-none border">
+                    <input type="date" id="j-date" value="${new Date().toISOString().split('T')[0]}" class="p-4 bg-slate-50 rounded-2xl font-bold border">
+                    <input type="number" id="j-meeting" placeholder="Pertemuan" class="p-4 bg-slate-50 rounded-2xl font-bold border">
                 </div>
-                <input type="text" id="j-teacher" placeholder="Guru" class="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border">
-                <input type="text" id="j-subject" placeholder="Mapel" class="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border">
-                <select id="j-class" class="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border">
+                <select id="j-teacher" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border">
+                    <option value="">Pilih Guru Pengajar</option>
+                    ${state.teachers.map(t => `<option value="${t.name}">${t.name} (${t.subject})</option>`).join('')}
+                </select>
+                <select id="j-class" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border">
                     ${state.classes.map(cl => `<option value="${cl.id}">${cl.name}</option>`).join('')}
                 </select>
-                <input type="text" id="j-topic" placeholder="Pokok Bahasan" class="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border">
-                <textarea id="j-activity" placeholder="Kegiatan" class="w-full p-4 bg-slate-50 rounded-2xl font-medium outline-none border h-24"></textarea>
-                <textarea id="j-absent" placeholder="Siswa Absen" class="w-full p-4 bg-slate-50 rounded-2xl font-medium outline-none border h-20"></textarea>
+                <input type="text" id="j-subject" placeholder="Mata Pelajaran" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border">
+                <input type="text" id="j-topic" placeholder="Pokok Bahasan" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border">
+                <textarea id="j-activity" placeholder="Kegiatan KBM" class="w-full p-4 bg-slate-50 rounded-2xl h-24 border font-medium"></textarea>
+                <textarea id="j-absent" placeholder="Catatan Absen" class="w-full p-4 bg-slate-50 rounded-2xl h-20 border font-medium"></textarea>
                 <button onclick="window.saveJournal()" class="w-full py-5 tosca-gradient text-white rounded-3xl font-black uppercase shadow-xl mt-4">Simpan Jurnal</button>
             </div>`;
             document.getElementById('modal').classList.remove('hidden'); lucide.createIcons();
@@ -362,286 +639,21 @@
         window.openAddAchievement = () => {
             const b = document.getElementById('modal-body'); document.getElementById('modal-title').innerText = "Catat Prestasi";
             b.innerHTML = `<div class="space-y-4">
-                <select id="a-student" class="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border">
+                <select id="a-student" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border">
                     ${state.students.map(s => `<option value="${s.id}">${s.name} (${s.classes?.name})</option>`).join('')}
                 </select>
-                <input type="text" id="a-title" placeholder="Judul Prestasi" class="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border">
-                <textarea id="a-desc" placeholder="Deskripsi" class="w-full p-4 bg-slate-50 rounded-2xl font-medium outline-none border h-32"></textarea>
+                <input type="text" id="a-title" placeholder="Judul Prestasi" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border">
+                <textarea id="a-desc" placeholder="Deskripsi" class="w-full p-4 bg-slate-50 rounded-2xl h-32 border font-medium"></textarea>
                 <button onclick="window.saveAchievement()" class="w-full py-5 gold-gradient text-white rounded-3xl font-black uppercase shadow-xl mt-4">Simpan Prestasi</button>
             </div>`;
             document.getElementById('modal').classList.remove('hidden'); lucide.createIcons();
         };
 
-        window.updateSettings = async () => {
-            const sets = [
-                { key: 'check_in_start', value: document.getElementById('s-in-s').value },
-                { key: 'check_in_end', value: document.getElementById('s-in-e').value },
-                { key: 'check_out_start', value: document.getElementById('s-out-s').value },
-                { key: 'check_out_end', value: document.getElementById('s-out-e').value }
-            ];
-            const { error } = await supabaseClient.from('settings').upsert(sets, { onConflict: 'key' });
-            if (!error) window.notify("Pengaturan Disimpan");
-        };
-
-        function render() {
-            const nav = document.getElementById('nav-links');
-            nav.innerHTML = pages.map(p => `
-                <button onclick="window.navigate('${p.id}')" class="w-full flex items-center gap-5 px-6 py-5 rounded-4xl transition-all text-xs font-black uppercase tracking-widest ${state.currentPage === p.id ? 'sidebar-item-active' : 'text-white/60 hover:bg-white/5'}">
-                    <i data-lucide="${p.icon}" class="w-5 h-5"></i> ${p.label}
-                </button>
-            `).join('');
-            
-            document.getElementById('page-title').innerText = pages.find(p => p.id === state.currentPage)?.label || '';
-            document.getElementById('current-date-display').innerText = new Intl.DateTimeFormat('id-ID', { dateStyle: 'full' }).format(new Date());
-            const container = document.getElementById('content');
-            
-            if (state.isLoading) {
-                container.innerHTML = `<div class="h-full flex flex-col items-center justify-center gap-6"><div class="w-16 h-16 border-[6px] border-slate-100 border-t-tosca animate-spin rounded-full"></div><p class="font-black text-tosca text-[11px] uppercase tracking-widest">Memuat...</p></div>`;
-                return;
-            }
-            
-            switch(state.currentPage) {
-                case 'dashboard': renderDashboard(container); break;
-                case 'classes': renderClasses(container); break;
-                case 'students': renderStudents(container); break;
-                case 'attendance': renderAttendance(container); break;
-                case 'journals': renderJournals(container); break;
-                case 'achievements': renderAchievements(container); break;
-                case 'settings': renderSettings(container); break;
-            }
-            lucide.createIcons();
-        }
-
-        // --- STREAMING_CHUNK: Merender komponen dashboard dan statistik... ---
-        function renderDashboard(c) {
-            const h = state.attendance.filter(a => a.status === 'Hadir').length;
-            const s = state.attendance.filter(a => a.status === 'Sakit').length;
-            const i = state.attendance.filter(a => a.status === 'Izin').length;
-            const a = state.attendance.filter(a => a.status === 'Alpa').length;
-            
-            c.innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                    ${statCard('Total Siswa', state.students.length, 'users', 'tosca')}
-                    ${statCard('Hadir Hari Ini', h, 'check-circle', 'tosca')}
-                    ${statCard('Jurnal Guru', state.journals.length, 'book-open', 'tosca')}
-                    ${statCard('Prestasi', state.achievements.length, 'award', 'tosca')}
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    ${statCard('Sakit', s, 'thermometer', 'gold')}
-                    ${statCard('Izin', i, 'clipboard-edit', 'gold')}
-                    ${statCard('Alpa', a, 'user-x', 'gold')}
-                </div>
-                <div class="tosca-gradient p-10 md:p-16 rounded-5xl shadow-2xl relative overflow-hidden text-white group border-4 border-white/10">
-                    <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-10">
-                        <div class="text-center md:text-left">
-                            <h3 class="text-3xl md:text-5xl font-black mb-4 tracking-tighter uppercase leading-tight">Selamat Datang di <br/><span class="text-gold-light">Portal Absensi Online</span></h3>
-                            <p class="text-white/70 font-medium mb-8 max-w-md mx-auto md:mx-0">Pantau kehadiran, catat jurnal KBM, dan dokumentasikan prestasi siswa dalam satu platform terpadu.</p>
-                            <button onclick="window.navigate('attendance')" class="px-10 py-5 bg-white text-tosca rounded-2xl font-black uppercase tracking-widest shadow-xl hover:scale-105 transition-all">Mulai Absensi</button>
-                        </div>
-                        <div class="bg-black/20 backdrop-blur-md p-10 rounded-4xl border border-white/10 text-center min-w-[280px] shadow-inner">
-                            <p id="digital-date" class="text-[10px] font-black uppercase tracking-[0.3em] text-gold-light mb-2"></p>
-                            <div id="digital-clock" class="text-5xl md:text-6xl font-black tracking-tighter text-white drop-shadow-2xl">00:00:00</div>
-                            <div class="mt-4 flex justify-center gap-2"><span class="w-2 h-2 rounded-full bg-gold animate-pulse"></span><span class="text-[8px] font-black uppercase tracking-widest text-white/50">Waktu Real-time</span></div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function statCard(t, v, i, theme) {
-            return `<div class="bg-white p-6 rounded-4xl border border-slate-100 shadow-sm flex items-center gap-5 border-b-4 ${theme === 'tosca' ? 'border-tosca' : 'border-gold'}">
-                <div class="w-14 h-14 ${theme === 'tosca' ? 'tosca-gradient' : 'gold-gradient'} text-white rounded-3xl flex items-center justify-center shadow-lg"><i data-lucide="${i}" class="w-6 h-6"></i></div>
-                <div><p class="text-[9px] font-black uppercase text-slate-400 tracking-tighter">${t}</p><p class="text-2xl font-black text-slate-800 tracking-tighter">${v}</p></div>
-            </div>`;
-        }
-
-        function renderClasses(c) {
-            c.innerHTML = `<div class="bg-white p-8 rounded-5xl shadow-xl border border-slate-100">
-                <div class="flex justify-between items-center mb-8">
-                    <h3 class="text-lg font-black text-tosca uppercase tracking-tighter">Data Kelas</h3>
-                    <button onclick="window.openAddClass()" class="px-6 py-3 tosca-gradient text-white rounded-2xl font-black text-[10px] uppercase shadow-xl">+ Tambah Kelas</button>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    ${state.classes.map(cl => {
-                        const count = state.students.filter(s => s.class_id === cl.id).length;
-                        const L = state.students.filter(s => s.class_id === cl.id && s.gender === 'L').length;
-                        const P = state.students.filter(s => s.class_id === cl.id && s.gender === 'P').length;
-                        const absToday = state.attendance.filter(a => state.students.find(s => s.id === a.student_id && s.class_id === cl.id));
-                        
-                        const h = absToday.filter(a => a.status === 'Hadir').length;
-                        const s = absToday.filter(a => a.status === 'Sakit').length;
-                        const i = absToday.filter(a => a.status === 'Izin').length;
-                        const a = absToday.filter(a => a.status === 'Alpa').length;
-
-                        return `<div class="p-6 bg-slate-50 rounded-4xl border border-slate-100 relative group">
-                            <div class="flex justify-between items-start mb-4">
-                                <span class="font-black text-xl text-slate-800 uppercase">${cl.name}</span>
-                                <button onclick="window.deleteData('classes', '${cl.id}')" class="text-rose-400 hover:bg-rose-50 p-2 rounded-xl"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                            </div>
-                            <div class="space-y-4">
-                                <div class="flex justify-between text-[10px] font-bold text-slate-500 uppercase border-b pb-2"><span>Total Siswa</span><span>${count} (${L}L / ${P}P)</span></div>
-                                <div class="grid grid-cols-4 gap-1.5">
-                                    <div class="p-2 bg-emerald-50 rounded-xl text-center border border-emerald-100"><p class="text-[8px] font-black text-emerald-600 uppercase">H</p><p class="text-sm font-black text-emerald-800">${h}</p></div>
-                                    <div class="p-2 bg-amber-50 rounded-xl text-center border border-amber-100"><p class="text-[8px] font-black text-amber-600 uppercase">S</p><p class="text-sm font-black text-amber-800">${s}</p></div>
-                                    <div class="p-2 bg-blue-50 rounded-xl text-center border border-blue-100"><p class="text-[8px] font-black text-blue-600 uppercase">I</p><p class="text-sm font-black text-blue-800">${i}</p></div>
-                                    <div class="p-2 bg-rose-50 rounded-xl text-center border border-rose-100"><p class="text-[8px] font-black text-rose-600 uppercase">A</p><p class="text-sm font-black text-rose-800">${a}</p></div>
-                                </div>
-                            </div>
-                        </div>`;
-                    }).join('')}
-                </div>
-            </div>`;
-        }
-
-        function renderStudents(c) {
-            c.innerHTML = `<div class="bg-white p-8 rounded-5xl shadow-xl border border-slate-100">
-                <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-                    <h3 class="text-lg font-black text-tosca uppercase tracking-tighter">Data Siswa</h3>
-                    <div class="flex gap-2">
-                        <button onclick="document.getElementById('excel-input').click()" class="px-5 py-3 bg-slate-100 text-slate-600 rounded-2xl font-black text-[10px] uppercase">Import Excel</button>
-                        <button onclick="window.openAddStudent()" class="px-6 py-3 tosca-gradient text-white rounded-2xl font-black text-[10px] uppercase shadow-xl">+ Siswa</button>
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    ${state.students.map(s => `
-                        <div class="bg-slate-50 p-5 rounded-4xl border border-slate-100 flex items-center justify-between">
-                            <div class="min-w-0">
-                                <p class="font-black text-slate-800 truncate text-sm uppercase">${s.name}</p>
-                                <p class="text-[9px] font-bold uppercase text-tosca/70">${s.classes?.name || '-'} • ${s.nisn} (${s.gender})</p>
-                            </div>
-                            <div class="flex gap-1">
-                                <button onclick="window.downloadQR('${s.nisn}', '${s.name}')" class="p-2 bg-white text-tosca rounded-xl shadow-sm hover:gold-gradient hover:text-white"><i data-lucide="qr-code" class="w-3.5 h-3.5"></i></button>
-                                <button onclick="window.openEditStudent('${s.id}')" class="p-2 bg-white text-gold rounded-xl shadow-sm hover:gold-gradient hover:text-white"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
-                                <button onclick="window.deleteData('students', '${s.id}')" class="p-2 bg-white text-rose-400 rounded-xl shadow-sm hover:bg-rose-500 hover:text-white"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-                            </div>
-                        </div>`).join('')}
-                </div>
-            </div>`;
-        }
-
-        // --- STREAMING_CHUNK: Merender modul absensi manual dan scanner... ---
-        function renderAttendance(c) {
-            c.innerHTML = `<div class="space-y-8">
-                <div class="flex bg-white p-2 rounded-5xl shadow-xl border border-slate-100 w-full max-w-sm mx-auto">
-                    <button onclick="window.setAbsensiType('manual')" class="flex-1 py-4 rounded-4xl text-xs font-black uppercase ${state.absensiType === 'manual' ? 'tosca-gradient text-white' : 'text-slate-400'}">Manual</button>
-                    <button onclick="window.setAbsensiType('qr')" class="flex-1 py-4 rounded-4xl text-xs font-black uppercase ${state.absensiType === 'qr' ? 'tosca-gradient text-white' : 'text-slate-400'}">Scan QR</button>
-                </div>
-                ${state.absensiType === 'manual' ? renderManualSection() : renderQRSection()}
-            </div>`;
-        }
-
-        function renderManualSection() {
-            const filtered = state.students.filter(s => (state.selectedClass === '' || s.class_id === state.selectedClass));
-            return `<div class="tosca-gradient p-8 rounded-5xl shadow-2xl overflow-x-auto border-4 border-white/10">
-                <div class="flex flex-col md:flex-row gap-6 mb-10 items-end min-w-[500px]">
-                    <div class="flex-1">
-                        <label class="text-[10px] font-black text-gold-light uppercase mb-3 block tracking-widest">Sesi</label>
-                        <div class="flex bg-white/10 p-1.5 rounded-2xl">
-                            <button onclick="window.setManualMode('check_in')" class="flex-1 py-3 text-[10px] font-black rounded-xl ${state.manualMode === 'check_in' ? 'bg-white text-tosca shadow-xl' : 'text-white/40'} uppercase">Masuk</button>
-                            <button onclick="window.setManualMode('check_out')" class="flex-1 py-3 text-[10px] font-black rounded-xl ${state.manualMode === 'check_out' ? 'bg-white text-tosca shadow-xl' : 'text-white/40'} uppercase">Pulang</button>
-                        </div>
-                    </div>
-                    <div class="flex-1">
-                        <label class="text-[10px] font-black text-gold-light uppercase mb-3 block tracking-widest">Filter Kelas</label>
-                        <select onchange="window.setSelectedClass(this.value)" class="w-full p-4 bg-white/10 text-white rounded-2xl font-bold outline-none">
-                            <option value="" class="text-slate-800">Semua Kelas</option>
-                            ${state.classes.map(cl => `<option value="${cl.id}" class="text-slate-800" ${state.selectedClass === cl.id ? 'selected' : ''}>${cl.name}</option>`).join('')}
-                        </select>
-                    </div>
-                </div>
-                <table class="w-full min-w-[600px] text-white">
-                    <thead class="text-left text-[9px] font-black text-white/30 uppercase tracking-[0.2em] border-b border-white/10">
-                        <tr><th class="pb-6">Nama Siswa</th><th class="pb-6 text-center">Status</th><th class="pb-6">Keterangan</th><th class="pb-6 text-right">WA</th></tr>
-                    </thead>
-                    <tbody class="divide-y divide-white/5">
-                        ${filtered.map(s => {
-                            const att = state.attendance.find(a => a.student_id === s.id);
-                            return `<tr>
-                                <td class="py-5"><p class="font-black text-sm uppercase">${s.name}</p><p class="text-[8px] font-bold text-gold-light uppercase">${s.nisn}</p></td>
-                                <td class="py-5 text-center">
-                                    <select onchange="window.markAttendance('${s.id}', this.value)" class="p-2 bg-white/5 border border-white/10 rounded-xl text-[9px] font-black uppercase text-gold-light">
-                                        <option value="Hadir" class="text-slate-800" ${att?.status === 'Hadir' ? 'selected' : ''}>Hadir</option>
-                                        <option value="Sakit" class="text-slate-800" ${att?.status === 'Sakit' ? 'selected' : ''}>Sakit</option>
-                                        <option value="Izin" class="text-slate-800" ${att?.status === 'Izin' ? 'selected' : ''}>Izin</option>
-                                        <option value="Alpa" class="text-slate-800" ${att?.status === 'Alpa' ? 'selected' : ''}>Alpa</option>
-                                    </select>
-                                </td>
-                                <td class="py-5"><input placeholder="Catatan..." value="${att?.notes || ''}" onblur="window.markAttendance('${s.id}', null, this.value)" class="w-full p-3 bg-white/5 rounded-xl text-[10px] font-bold text-white outline-none border border-white/10"></td>
-                                <td class="py-5 text-right"><button onclick="window.sendWA('${s.name}', '${s.parent_phone}', '${att?.status || 'Hadir'}', '${att?.notes || ''}')" class="p-3 gold-gradient text-white rounded-2xl shadow-lg active:scale-90"><i data-lucide="message-circle" class="w-4 h-4"></i></button></td>
-                            </tr>`;
-                        }).join('')}
-                    </tbody>
-                </table>
-            </div>`;
-        }
-
-        function renderQRSection() {
-            return `<div class="bg-white p-12 rounded-5xl border border-slate-100 shadow-2xl text-center max-sm mx-auto">
-                <div id="reader" class="mx-auto w-full aspect-square mb-8 rounded-4xl overflow-hidden border-4 border-slate-50 flex items-center justify-center bg-slate-50"><i data-lucide="scan" class="w-16 h-16 text-tosca/10"></i></div>
-                <button id="scan-btn" onclick="window.toggleScanner()" class="w-full py-5 tosca-gradient text-white rounded-2xl font-black uppercase shadow-xl tracking-widest">Aktifkan Kamera</button>
-            </div>`;
-        }
-
-        function renderJournals(c) {
-            c.innerHTML = `<div class="bg-white p-8 rounded-5xl shadow-xl border border-slate-100">
-                <div class="flex justify-between items-center mb-8">
-                    <h3 class="text-lg font-black text-tosca uppercase tracking-tighter">Jurnal Guru</h3>
-                    <button onclick="window.openAddJournal()" class="px-6 py-3 tosca-gradient text-white rounded-2xl font-black text-[10px] uppercase shadow-xl">+ Jurnal</button>
-                </div>
-                <div class="space-y-4">
-                    ${state.journals.map(j => `<div class="p-6 bg-slate-50 rounded-4xl border border-slate-100 flex justify-between items-start">
-                        <div>
-                            <div class="flex items-center gap-3 mb-2"><span class="px-3 py-1 bg-tosca text-white text-[8px] font-black rounded-lg uppercase">${new Date(j.date).toLocaleDateString('id-ID')}</span><span class="px-3 py-1 bg-gold text-white text-[8px] font-black rounded-lg uppercase">#${j.meeting_number}</span></div>
-                            <h4 class="font-black text-slate-800 uppercase text-sm">${j.subject}: ${j.topic}</h4>
-                            <p class="text-[9px] font-bold text-tosca uppercase mb-4">${j.teacher_name} • ${j.classes?.name}</p>
-                            <p class="text-xs text-slate-500">${j.activity}</p>
-                        </div>
-                        <button onclick="window.deleteData('journals', '${j.id}')" class="text-rose-300 hover:text-rose-500 p-2"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                    </div>`).join('')}
-                </div>
-            </div>`;
-        }
-
-        function renderAchievements(c) {
-            c.innerHTML = `<div class="bg-white p-8 rounded-5xl shadow-xl border border-slate-100">
-                <div class="flex justify-between items-center mb-8">
-                    <h3 class="text-lg font-black text-gold uppercase tracking-tighter">Prestasi Siswa</h3>
-                    <button onclick="window.openAddAchievement()" class="px-6 py-3 gold-gradient text-white rounded-2xl font-black text-[10px] uppercase shadow-xl">+ Prestasi</button>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    ${state.achievements.map(a => `<div class="p-6 bg-amber-50 rounded-4xl border border-amber-100 relative group overflow-hidden">
-                        <i data-lucide="award" class="absolute -right-5 -bottom-5 w-24 h-24 text-amber-200/50"></i>
-                        <div class="relative z-10 flex justify-between">
-                            <div><p class="font-black text-amber-900 text-sm uppercase">${a.title}</p><p class="text-[9px] font-bold uppercase text-amber-600/70 mb-4">${a.students?.name}</p><p class="text-xs text-amber-800/60">${a.description}</p></div>
-                            <button onclick="window.deleteData('achievements', '${a.id}')" class="text-rose-400 p-2"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                        </div>
-                    </div>`).join('')}
-                </div>
-            </div>`;
-        }
-
-        function renderSettings(c) {
-            c.innerHTML = `<div class="bg-white p-8 rounded-5xl shadow-xl border border-slate-100 max-w-xl mx-auto">
-                <h3 class="text-lg font-black uppercase text-slate-800 mb-8 text-center tracking-widest">Pengaturan Jam</h3>
-                <div class="space-y-6">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div><label class="text-[9px] font-black text-tosca uppercase mb-2 block">Masuk Mulai</label><input type="time" id="s-in-s" value="${state.settings.check_in_start}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border"></div>
-                        <div><label class="text-[9px] font-black text-tosca uppercase mb-2 block">Masuk Selesai</label><input type="time" id="s-in-e" value="${state.settings.check_in_end}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border"></div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div><label class="text-[9px] font-black text-gold uppercase mb-2 block">Pulang Mulai</label><input type="time" id="s-out-s" value="${state.settings.check_out_start}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border"></div>
-                        <div><label class="text-[9px] font-black text-gold uppercase mb-2 block">Pulang Selesai</label><input type="time" id="s-out-e" value="${state.settings.check_out_end}" class="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border"></div>
-                    </div>
-                    <button onclick="window.updateSettings()" class="w-full py-5 tosca-gradient text-white rounded-3xl font-black uppercase shadow-xl mt-4">Simpan Pengaturan</button>
-                </div>
-            </div>`;
-        }
-
-        // --- STREAMING_CHUNK: Menginisialisasi aplikasi pada saat DOM siap... ---
         document.addEventListener('DOMContentLoaded', () => { 
             window.fetchData(); 
-            window.startDigitalClock(); 
+            window.startDigitalClock();
         });
+
     </script>
 </body>
 </html>
